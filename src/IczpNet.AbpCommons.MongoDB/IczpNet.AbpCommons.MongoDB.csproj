@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Import Project="..\..\common.props" />
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<RootNamespace>IczpNet.AbpCommons</RootNamespace>
+		<Authors>IczpNet</Authors>
+		<RepositoryUrl>https://github.com/Iczp/AbpCommons.git</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/Iczp/AbpCommons.git</PackageProjectUrl>
+		<Version>0.1.1</Version>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Volo.Abp.MongoDB" Version="6.0.1" />
+		<ProjectReference Include="..\IczpNet.AbpCommons.Domain\IczpNet.AbpCommons.Domain.csproj" />
+	</ItemGroup>
+
+</Project>

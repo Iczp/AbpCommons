@@ -1,0 +1,7 @@
+{
+  "modules": {
+    "IczpNet.AbpCommons": {
+      "path": "IczpNet.AbpCommons.abpmdl.json"
+    }
+  }
+}

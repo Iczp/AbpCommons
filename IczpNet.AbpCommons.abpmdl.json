@@ -1,0 +1,79 @@
+{
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {},
+      "host": {}
+    }
+  },
+  "packages": {
+    "IczpNet.AbpCommons.Domain.Shared": {
+      "path": "src/IczpNet.AbpCommons.Domain.Shared/IczpNet.AbpCommons.Domain.Shared.abppkg.json",
+      "folder": "src"
+    },
+    "IczpNet.AbpCommons.Domain": {
+      "path": "src/IczpNet.AbpCommons.Domain/IczpNet.AbpCommons.Domain.abppkg.json",
+      "folder": "src"
+    },
+    "IczpNet.AbpCommons.Application.Contracts": {
+      "path": "src/IczpNet.AbpCommons.Application.Contracts/IczpNet.AbpCommons.Application.Contracts.abppkg.json",
+      "folder": "src"
+    },
+    "IczpNet.AbpCommons.Application": {
+      "path": "src/IczpNet.AbpCommons.Application/IczpNet.AbpCommons.Application.abppkg.json",
+      "folder": "src"
+    },
+    "IczpNet.AbpCommons.EntityFrameworkCore": {
+      "path": "src/IczpNet.AbpCommons.EntityFrameworkCore/IczpNet.AbpCommons.EntityFrameworkCore.abppkg.json",
+      "folder": "src"
+    },
+    "IczpNet.AbpCommons.MongoDB": {
+      "path": "src/IczpNet.AbpCommons.MongoDB/IczpNet.AbpCommons.MongoDB.abppkg.json",
+      "folder": "src"
+    },
+    "IczpNet.AbpCommons.HttpApi": {
+      "path": "src/IczpNet.AbpCommons.HttpApi/IczpNet.AbpCommons.HttpApi.abppkg.json",
+      "folder": "src"
+    },
+    "IczpNet.AbpCommons.HttpApi.Client": {
+      "path": "src/IczpNet.AbpCommons.HttpApi.Client/IczpNet.AbpCommons.HttpApi.Client.abppkg.json",
+      "folder": "src"
+    },
+    "IczpNet.AbpCommons.TestBase": {
+      "path": "test/IczpNet.AbpCommons.TestBase/IczpNet.AbpCommons.TestBase.abppkg.json",
+      "folder": "test"
+    },
+    "IczpNet.AbpCommons.EntityFrameworkCore.Tests": {
+      "path": "test/IczpNet.AbpCommons.EntityFrameworkCore.Tests/IczpNet.AbpCommons.EntityFrameworkCore.Tests.abppkg.json",
+      "folder": "test"
+    },
+    "IczpNet.AbpCommons.MongoDB.Tests": {
+      "path": "test/IczpNet.AbpCommons.MongoDB.Tests/IczpNet.AbpCommons.MongoDB.Tests.abppkg.json",
+      "folder": "test"
+    },
+    "IczpNet.AbpCommons.Domain.Tests": {
+      "path": "test/IczpNet.AbpCommons.Domain.Tests/IczpNet.AbpCommons.Domain.Tests.abppkg.json",
+      "folder": "test"
+    },
+    "IczpNet.AbpCommons.Application.Tests": {
+      "path": "test/IczpNet.AbpCommons.Application.Tests/IczpNet.AbpCommons.Application.Tests.abppkg.json",
+      "folder": "test"
+    },
+    "IczpNet.AbpCommons.HttpApi.Host": {
+      "path": "host/IczpNet.AbpCommons.HttpApi.Host/IczpNet.AbpCommons.HttpApi.Host.abppkg.json",
+      "folder": "host"
+    },
+    "IczpNet.AbpCommons.HttpApi.Client.ConsoleTestApp": {
+      "path": "test/IczpNet.AbpCommons.HttpApi.Client.ConsoleTestApp/IczpNet.AbpCommons.HttpApi.Client.ConsoleTestApp.abppkg.json",
+      "folder": "test"
+    },
+    "IczpNet.AbpCommons.AuthServer": {
+      "path": "host/IczpNet.AbpCommons.AuthServer/IczpNet.AbpCommons.AuthServer.abppkg.json",
+      "folder": "host"
+    },
+    "IczpNet.AbpCommons.Host.Shared": {
+      "path": "host/IczpNet.AbpCommons.Host.Shared/IczpNet.AbpCommons.Host.Shared.abppkg.json",
+      "folder": "host"
+    }
+  }
+}

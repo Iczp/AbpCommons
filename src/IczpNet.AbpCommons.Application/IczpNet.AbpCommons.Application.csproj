@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>IczpNet.AbpCommons</RootNamespace>
+		<Authors>IczpNet</Authors>
+		<RepositoryUrl>https://github.com/Iczp/AbpCommons.git</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/Iczp/AbpCommons.git</PackageProjectUrl>
+		<Version>0.1.1</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.AutoMapper" Version="6.0.1" />
+    <PackageReference Include="Volo.Abp.Ddd.Application" Version="6.0.1" />
+    <ProjectReference Include="..\IczpNet.AbpCommons.Application.Contracts\IczpNet.AbpCommons.Application.Contracts.csproj" />
+    <ProjectReference Include="..\IczpNet.AbpCommons.Domain\IczpNet.AbpCommons.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
