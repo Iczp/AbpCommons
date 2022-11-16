@@ -25,6 +25,14 @@ namespace IczpNet.AbpCommons
             TGetListInput,
             TCreateInput,
             TUpdateInput>
+         ,
+    ICrudCommonAppService<
+        TGetOutputDto,
+        TGetListOutputDto,
+        TKey,
+        TGetListInput,
+        TCreateInput,
+        TUpdateInput>
         where TEntity : class, IEntity<TKey>
         where TGetOutputDto : IEntityDto<TKey>
         where TGetListOutputDto : IEntityDto<TKey>
@@ -77,7 +85,7 @@ namespace IczpNet.AbpCommons
         }
 
         [HttpPost]
-        public virtual async Task DeleteAsync(List<TKey> idList)
+        public virtual async Task DeleteManyAsync(List<TKey> idList)
         {
             foreach(var id in idList)
             {
