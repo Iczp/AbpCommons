@@ -2,7 +2,6 @@
 {
     public interface ICode
     {
-
         string Code { get; }
     }
 }
