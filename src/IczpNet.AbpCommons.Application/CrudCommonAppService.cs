@@ -1,13 +1,11 @@
 ﻿using IczpNet.AbpCommons.DataFilters;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.MultiTenancy;
 
 namespace IczpNet.AbpCommons
 {
