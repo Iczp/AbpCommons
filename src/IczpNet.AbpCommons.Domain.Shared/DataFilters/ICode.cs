@@ -3,6 +3,6 @@
     public interface ICode
     {
 
-        string Name { get; }
+        string Code { get; }
     }
 }

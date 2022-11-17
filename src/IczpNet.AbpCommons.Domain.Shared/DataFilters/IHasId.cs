@@ -2,6 +2,6 @@
 {
     public interface IHasId<TKey>
     {
-        TKey Id { get; set; }
+        TKey Id { get; }
     }
 }
