@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using IczpNet.AbpCommons.DataFilters;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace IczpNet.AbpCommons
 {
@@ -110,17 +112,28 @@ namespace IczpNet.AbpCommons
         }
 
         [HttpPost]
-        public override Task DeleteAsync(TKey id)
+        public override async Task DeleteAsync(TKey id)
         {
-            return base.DeleteAsync(id);
+            await CheckDeleteIsStaticAsync(id);
+
+            await base.DeleteAsync(id);
+        }
+
+        protected virtual async Task CheckDeleteIsStaticAsync(TKey id)
+        {
+            var entity = await GetEntityByIdAsync(id);
+
+            var propInfo = entity.GetType().GetProperty(nameof(IIsStatic.IsStatic));
+
+            Assert.If(entity is IIsStatic && propInfo != null && (bool)propInfo.GetValue(entity), "IsStatic=True,cannot delete.");
         }
 
         [HttpPost]
         public virtual async Task DeleteManyAsync(List<TKey> idList)
         {
-            foreach(var id in idList)
+            foreach (var id in idList)
             {
-                await base.DeleteAsync(id);
+                await DeleteAsync(id);
             }
         }
     }
