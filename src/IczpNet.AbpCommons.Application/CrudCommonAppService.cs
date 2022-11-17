@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
@@ -67,15 +68,45 @@ namespace IczpNet.AbpCommons
         }
 
         [HttpPost]
-        public override Task<TGetOutputDto> CreateAsync(TCreateInput input)
+        public override async Task<TGetOutputDto> CreateAsync(TCreateInput input)
         {
-            return base.CreateAsync(input);
+            await CheckCreatePolicyAsync();
+
+            var entity = await MapToEntityAsync(input);
+
+            await SetCreateEntityAsync(entity, input);
+
+            TryToSetTenantId(entity);
+
+            await Repository.InsertAsync(entity, autoSave: true);
+
+            return await MapToGetOutputDtoAsync(entity);
+        }
+
+        protected virtual Task SetCreateEntityAsync(TEntity entity, TCreateInput input)
+        {
+            return Task.CompletedTask;
         }
 
         [HttpPost]
-        public override Task<TGetOutputDto> UpdateAsync(TKey id, TUpdateInput input)
+        public override async Task<TGetOutputDto> UpdateAsync(TKey id, TUpdateInput input)
         {
-            return base.UpdateAsync(id, input);
+            await CheckUpdatePolicyAsync();
+
+            var entity = await GetEntityByIdAsync(id);
+            //TODO: Check if input has id different than given id and normalize if it's default value, throw ex otherwise
+            await MapToEntityAsync(input, entity);
+
+            await SetUpdateEntityAsync(entity, input);
+
+            await Repository.UpdateAsync(entity, autoSave: true);
+
+            return await MapToGetOutputDtoAsync(entity);
+        }
+
+        protected virtual Task SetUpdateEntityAsync(TEntity entity, TUpdateInput input)
+        {
+            return Task.CompletedTask;
         }
 
         [HttpPost]
