@@ -9,7 +9,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace IczpNet.AbpCommons
 {
-    public abstract class CrudCommonAppService<
+    public abstract class CrudAbpCommonsAppService<
         TEntity,
         TGetOutputDto,
         TGetListOutputDto,
@@ -27,7 +27,7 @@ namespace IczpNet.AbpCommons
             TCreateInput,
             TUpdateInput>
          ,
-    ICrudCommonAppService<
+    ICrudAbpCommonsAppService<
         TGetOutputDto,
         TGetListOutputDto,
         TKey,
@@ -38,7 +38,7 @@ namespace IczpNet.AbpCommons
         where TGetOutputDto : IEntityDto<TKey>
         where TGetListOutputDto : IEntityDto<TKey>
     {
-        protected CrudCommonAppService(IRepository<TEntity, TKey> repository) : base(repository)
+        protected CrudAbpCommonsAppService(IRepository<TEntity, TKey> repository) : base(repository)
         {
 
         }

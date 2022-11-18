@@ -4,7 +4,7 @@ using Volo.Abp.Application.Services;
 
 namespace IczpNet.AbpCommons
 {
-    public interface ICrudCommonAppService<
+    public interface ICrudAbpCommonsAppService<
         TGetOutputDto,
         TGetListOutputDto,
         TKey,
