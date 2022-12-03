@@ -48,8 +48,6 @@ namespace IczpNet.AbpCommons.EntityFrameworkCore
                         b.ToTable(getTableName(t), dbSchema);
                     }
 
-                    AbpEntityTypeBuilderExtensions.ConfigureByConvention(b); //auto configure for the base class props
-
                     b.ConfigureByConvention();
                 });
             }

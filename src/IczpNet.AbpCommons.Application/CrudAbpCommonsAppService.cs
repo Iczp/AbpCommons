@@ -1,6 +1,8 @@
 ﻿using IczpNet.AbpCommons.DataFilters;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -72,6 +74,8 @@ namespace IczpNet.AbpCommons
         {
             await CheckCreatePolicyAsync();
 
+            await CheckCreateAsync(input);
+
             var entity = await MapToEntityAsync(input);
 
             await SetCreateEntityAsync(entity, input);
@@ -81,6 +85,11 @@ namespace IczpNet.AbpCommons
             await Repository.InsertAsync(entity, autoSave: true);
 
             return await MapToGetOutputDtoAsync(entity);
+        }
+
+        protected virtual Task CheckCreateAsync(TCreateInput input)
+        {
+            return Task.CompletedTask;
         }
 
         protected virtual Task SetCreateEntityAsync(TEntity entity, TCreateInput input)
@@ -94,6 +103,9 @@ namespace IczpNet.AbpCommons
             await CheckUpdatePolicyAsync();
 
             var entity = await GetEntityByIdAsync(id);
+
+            await CheckUpdateAsync(id, entity, input);
+
             //TODO: Check if input has id different than given id and normalize if it's default value, throw ex otherwise
             await MapToEntityAsync(input, entity);
 
@@ -104,6 +116,11 @@ namespace IczpNet.AbpCommons
             return await MapToGetOutputDtoAsync(entity);
         }
 
+        protected virtual Task CheckUpdateAsync(TKey id, TEntity entity, TUpdateInput input)
+        {
+            return Task.CompletedTask;
+        }
+
         protected virtual Task SetUpdateEntityAsync(TEntity entity, TUpdateInput input)
         {
             return Task.CompletedTask;
@@ -112,18 +129,27 @@ namespace IczpNet.AbpCommons
         [HttpPost]
         public override async Task DeleteAsync(TKey id)
         {
-            await CheckDeleteIsStaticAsync(id);
+            await CheckDeletePolicyAsync();
 
-            await base.DeleteAsync(id);
-        }
-
-        protected virtual async Task CheckDeleteIsStaticAsync(TKey id)
-        {
             var entity = await GetEntityByIdAsync(id);
 
+            await CheckDeleteAsync(entity);
+
+            await DeleteByIdAsync(id);
+        }
+
+        protected virtual async Task CheckDeleteAsync(TEntity entity)
+        {
+            await CheckDeleteIsStaticAsync(entity);
+        }
+
+        protected virtual Task CheckDeleteIsStaticAsync(TEntity entity)
+        {
             var propInfo = entity.GetType().GetProperty(nameof(IIsStatic.IsStatic));
 
             Assert.If(entity is IIsStatic && propInfo != null && (bool)propInfo.GetValue(entity), "IsStatic=True,cannot delete.");
+
+            return Task.CompletedTask;
         }
 
         [HttpPost]
