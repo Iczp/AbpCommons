@@ -15,14 +15,14 @@ namespace IczpNet.AbpCommons;
 )]
 public class AbpCommonsDomainModule : AbpModule
 {
-    public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
-    {
-        var app = context.ServiceProvider.GetRequiredService<IObjectAccessor<IApplicationBuilder>>().Value;
+    //public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
+    //{
+    //    //var app = context.ServiceProvider.GetRequiredService<IObjectAccessor<IApplicationBuilder>>().Value;
 
-        app.UseStaticJsonSerializer();
+    //    //app.UseStaticJsonSerializer();
 
-        app.UseStaticAutoMapper();
+    //    //app.UseStaticAutoMapper();
 
-        await base.OnApplicationInitializationAsync(context);
-    }
+    //    await base.OnApplicationInitializationAsync(context);
+    //}
 }
