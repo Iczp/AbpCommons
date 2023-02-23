@@ -21,6 +21,6 @@ public abstract class SampleRepository_Tests<TStartupModule> : AbpCommonsTestBas
     [Fact]
     public async Task Method1Async()
     {
-
+        await Task.CompletedTask;
     }
 }

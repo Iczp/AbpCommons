@@ -15,6 +15,6 @@ public class SampleManager_Tests : AbpCommonsDomainTestBase
     [Fact]
     public async Task Method1Async()
     {
-
+        await Task.CompletedTask;
     }
 }

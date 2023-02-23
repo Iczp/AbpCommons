@@ -39,7 +39,7 @@ public class ClientDemoService : ITransientDependency
     {
         Console.WriteLine();
         Console.WriteLine($"***** {nameof(TestWithDynamicProxiesAsync)} *****");
-
+        await Task.CompletedTask;
         //var result = await _sampleAppService.GetAsync();
         //Console.WriteLine("Result: " + result.Value);
 
