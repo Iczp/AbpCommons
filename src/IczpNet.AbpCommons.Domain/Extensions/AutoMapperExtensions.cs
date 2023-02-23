@@ -25,8 +25,10 @@ namespace IczpNet.AbpCommons.Extensions
             ServiceProvider = applicationBuilder.ApplicationServices;
         }
 
-        public static TDestination MapTo<TSource, TDestination>(this TSource source, TDestination destination) => Mapper.Map<TSource, TDestination>(source, destination);
+        public static TDestination MapTo<TSource, TDestination>(this TSource source, TDestination destination) => Mapper.Map(source, destination);
 
         public static TDestination MapTo<TDestination>(this object source) => Mapper.Map<TDestination>(source);
+
+        public static object MapTo(this object source, Type sourceType, Type destinationType) => Mapper.Map(source, sourceType, destinationType);
     }
 }
