@@ -8,7 +8,7 @@
 		<Authors>IczpNet</Authors>
 		<RepositoryUrl>https://github.com/Iczp/AbpCommons.git</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/Iczp/AbpCommons.git</PackageProjectUrl>
-		<Version>0.1.3</Version>
+		<Version>0.1.4</Version>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
