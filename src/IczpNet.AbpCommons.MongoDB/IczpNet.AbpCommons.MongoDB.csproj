@@ -20,7 +20,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Volo.Abp.MongoDB" Version="7.0.2" />
+		<PackageReference Include="Volo.Abp.MongoDB" Version="7.1.0" />
 		<ProjectReference Include="..\IczpNet.AbpCommons.Domain\IczpNet.AbpCommons.Domain.csproj" />
 	</ItemGroup>
 
