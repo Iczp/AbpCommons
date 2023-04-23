@@ -82,6 +82,8 @@ namespace IczpNet.AbpCommons
 
             await Repository.InsertAsync(entity, autoSave: true);
 
+            //await base.CreateAsync(input);
+
             return await MapToGetOutputDtoAsync(entity);
         }
 
