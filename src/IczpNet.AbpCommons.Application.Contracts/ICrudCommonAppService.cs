@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
 namespace IczpNet.AbpCommons
@@ -25,7 +26,7 @@ namespace IczpNet.AbpCommons
         Task DeleteManyAsync(List<TKey> idList);
     }
 
-    public interface ICrudCommonAppService<
+    public interface ICrudAbpCommonsAppService<
             TGetOutputDto,
             TGetListOutputDto,
             TKey,
@@ -36,6 +37,8 @@ namespace IczpNet.AbpCommons
             TGetListOutputDto,
             TKey,
             TGetListInput>
+        where TGetOutputDto : IEntityDto<TKey>
+        where TGetListOutputDto : IEntityDto<TKey>
     {
 
     }

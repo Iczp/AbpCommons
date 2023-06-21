@@ -9,6 +9,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace IczpNet.AbpCommons
 {
+
     public abstract class CrudAbpCommonsAppService<
         TEntity,
         TGetOutputDto,
