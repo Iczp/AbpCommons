@@ -1,5 +1,6 @@
 ﻿using IczpNet.AbpCommons.DataFilters;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
@@ -45,9 +46,18 @@ namespace IczpNet.AbpCommons
         }
 
         [HttpGet]
-        public override Task<TGetOutputDto> GetAsync(TKey id)
+        public override async Task<TGetOutputDto> GetAsync(TKey id)
         {
-            return base.GetAsync(id);
+            await CheckGetPolicyAsync(id);
+
+            var entity = await GetEntityByIdAsync(id);
+
+            return await MapToGetOutputDtoAsync(entity);
+        }
+
+        protected virtual Task CheckGetPolicyAsync(TKey id)
+        {
+            return CheckGetPolicyAsync();
         }
 
         [HttpGet]
@@ -63,15 +73,39 @@ namespace IczpNet.AbpCommons
         }
 
         [HttpGet]
-        public override Task<PagedResultDto<TGetListOutputDto>> GetListAsync(TGetListInput input)
+        public override async Task<PagedResultDto<TGetListOutputDto>> GetListAsync(TGetListInput input)
         {
-            return base.GetListAsync(input);
+            await CheckGetListPolicyAsync(input);
+
+            var query = await CreateFilteredQueryAsync(input);
+
+            var totalCount = await AsyncExecuter.CountAsync(query);
+
+            var entityDtos = new List<TGetListOutputDto>();
+
+            if (totalCount > 0)
+            {
+                query = ApplySorting(query, input);
+
+                query = ApplyPaging(query, input);
+
+                var entities = await AsyncExecuter.ToListAsync(query);
+
+                entityDtos = await MapToGetListOutputDtosAsync(entities);
+            }
+
+            return new PagedResultDto<TGetListOutputDto>(totalCount, entityDtos);
+        }
+
+        protected virtual Task CheckGetListPolicyAsync(TGetListInput input)
+        {
+            return CheckGetListPolicyAsync();
         }
 
         [HttpPost]
         public override async Task<TGetOutputDto> CreateAsync(TCreateInput input)
         {
-            await CheckCreatePolicyAsync();
+            await CheckCreatePolicyAsync(input);
 
             await CheckCreateAsync(input);
 
@@ -88,6 +122,11 @@ namespace IczpNet.AbpCommons
             return await MapToGetOutputDtoAsync(entity);
         }
 
+        protected virtual Task CheckCreatePolicyAsync(TCreateInput input)
+        {
+            return CheckCreatePolicyAsync();
+        }
+
         protected virtual Task CheckCreateAsync(TCreateInput input)
         {
             return Task.CompletedTask;
@@ -101,7 +140,7 @@ namespace IczpNet.AbpCommons
         [HttpPost]
         public override async Task<TGetOutputDto> UpdateAsync(TKey id, TUpdateInput input)
         {
-            await CheckUpdatePolicyAsync();
+            await CheckUpdatePolicyAsync(input);
 
             var entity = await GetEntityByIdAsync(id);
 
@@ -117,6 +156,11 @@ namespace IczpNet.AbpCommons
             return await MapToGetOutputDtoAsync(entity);
         }
 
+        protected virtual Task CheckUpdatePolicyAsync(TUpdateInput input)
+        {
+            return CheckUpdatePolicyAsync();
+        }
+
         protected virtual Task CheckUpdateAsync(TKey id, TEntity entity, TUpdateInput input)
         {
             return Task.CompletedTask;
@@ -130,13 +174,18 @@ namespace IczpNet.AbpCommons
         [HttpPost]
         public override async Task DeleteAsync(TKey id)
         {
-            await CheckDeletePolicyAsync();
+            await CheckDeletePolicyAsync(id);
 
             var entity = await GetEntityByIdAsync(id);
 
             await CheckDeleteAsync(entity);
 
             await DeleteByIdAsync(id);
+        }
+
+        protected virtual Task CheckDeletePolicyAsync(TKey id)
+        {
+            return CheckDeletePolicyAsync();
         }
 
         protected virtual async Task CheckDeleteAsync(TEntity entity)
