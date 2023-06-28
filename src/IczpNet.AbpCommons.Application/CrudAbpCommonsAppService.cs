@@ -1,6 +1,5 @@
 ﻿using IczpNet.AbpCommons.DataFilters;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
@@ -140,7 +139,7 @@ namespace IczpNet.AbpCommons
         [HttpPost]
         public override async Task<TGetOutputDto> UpdateAsync(TKey id, TUpdateInput input)
         {
-            await CheckUpdatePolicyAsync(input);
+            await CheckUpdatePolicyAsync(id, input);
 
             var entity = await GetEntityByIdAsync(id);
 
@@ -156,7 +155,7 @@ namespace IczpNet.AbpCommons
             return await MapToGetOutputDtoAsync(entity);
         }
 
-        protected virtual Task CheckUpdatePolicyAsync(TUpdateInput input)
+        protected virtual Task CheckUpdatePolicyAsync(TKey id, TUpdateInput input1)
         {
             return CheckUpdatePolicyAsync();
         }
