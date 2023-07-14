@@ -2,7 +2,13 @@
 
 An abp module that provides standard tree structure entity implement.
 
+#### Public to Nuget.org
 
+```bash
+dotnet nuget push "src/*/bin/Release/*0.1.21.nupkg" --skip-duplicate -k xxxxxxxxxxxxxxx --source https://api.nuget.org/v3/index.json
+```
+
+### 
 
 ## Usage
 
