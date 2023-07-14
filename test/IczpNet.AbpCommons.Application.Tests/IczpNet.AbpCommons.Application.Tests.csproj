@@ -10,12 +10,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\IczpNet.AbpCommons.Application\IczpNet.AbpCommons.Application.csproj" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Domain.Tests\IczpNet.AbpCommons.Domain.Tests.csproj" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.3" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Update="ConfigureAwait.Fody" Version="3.3.2" />
-    <PackageReference Update="Fody" Version="6.6.4">
+    <PackageReference Update="Fody" Version="6.8.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

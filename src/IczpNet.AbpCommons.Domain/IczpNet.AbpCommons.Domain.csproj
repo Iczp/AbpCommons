@@ -8,7 +8,7 @@
 		<Authors>IczpNet</Authors>
 		<RepositoryUrl>https://github.com/Iczp/AbpCommons.git</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/Iczp/AbpCommons.git</PackageProjectUrl>
-		<Version>0.1.5</Version>
+		<Version>0.1.6</Version>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
@@ -21,7 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageReference Include="PinYinConverterCore" Version="1.0.2" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="Volo.Abp.AutoMapper" Version="7.3.0" />
@@ -31,7 +30,7 @@
 
   <ItemGroup>
     <PackageReference Update="ConfigureAwait.Fody" Version="3.3.2" />
-    <PackageReference Update="Fody" Version="6.7.0">
+    <PackageReference Update="Fody" Version="6.8.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

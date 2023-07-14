@@ -8,7 +8,7 @@
 		<Authors>IczpNet</Authors>
 		<RepositoryUrl>https://github.com/Iczp/AbpCommons.git</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/Iczp/AbpCommons.git</PackageProjectUrl>
-		<Version>0.1.5</Version>
+		<Version>0.1.6</Version>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <PackageReference Update="ConfigureAwait.Fody" Version="3.3.2" />
-    <PackageReference Update="Fody" Version="6.6.4">
+    <PackageReference Update="Fody" Version="6.8.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

@@ -1,5 +1,4 @@
 ﻿
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Volo.Abp.Json;
@@ -14,9 +13,9 @@ namespace IczpNet.AbpCommons.Extensions
         private static IServiceProvider ServiceProvider;
         private static IJsonSerializer _jsonSerializer;
         private static IJsonSerializer JsonSerializer => _jsonSerializer ??= ServiceProvider.GetRequiredService<IJsonSerializer>();
-        public static void UseStaticJsonSerializer(this IApplicationBuilder applicationBuilder)
+        public static void UseStaticJsonSerializer(this IServiceProvider serviceProvider)
         {
-            ServiceProvider = applicationBuilder.ApplicationServices;
+            ServiceProvider = serviceProvider;
         }
         public static T ToObject<T>(this string source) where T : class
         {

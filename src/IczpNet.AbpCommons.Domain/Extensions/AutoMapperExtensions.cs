@@ -1,6 +1,4 @@
 ﻿using AutoMapper;
-using AutoMapper.Internal.Mappers;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Volo.Abp.AutoMapper;
@@ -20,9 +18,9 @@ namespace IczpNet.AbpCommons.Extensions
         private static IMapper Mapper => _mapper ??= ServiceProvider.GetRequiredService<IMapperAccessor>().Mapper;
         //private static IMapper Mapper => _mapper ??= ServiceProvider.GetRequiredService<IMapper>();
         //private static IObjectMapper ObjectMapper => _objectMapper ??= ServiceProvider.GetRequiredService<IObjectMapper>();
-        public static void UseStaticAutoMapper(this IApplicationBuilder applicationBuilder)
+        public static void UseStaticAutoMapper(this IServiceProvider serviceProvider)
         {
-            ServiceProvider = applicationBuilder.ApplicationServices;
+            ServiceProvider = serviceProvider;
         }
 
         public static TDestination MapTo<TSource, TDestination>(this TSource source, TDestination destination) => Mapper.Map(source, destination);
