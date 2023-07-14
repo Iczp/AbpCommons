@@ -1,5 +1,4 @@
 ﻿using IczpNet.AbpCommons.DataFilters;
-using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
@@ -44,7 +43,7 @@ namespace IczpNet.AbpCommons
 
         }
 
-        [HttpGet]
+        //[HttpGet]
         public override async Task<TGetOutputDto> GetAsync(TKey id)
         {
             await CheckGetPolicyAsync(id);
@@ -59,7 +58,7 @@ namespace IczpNet.AbpCommons
             return CheckGetPolicyAsync();
         }
 
-        [HttpGet]
+        //[HttpGet]
         public virtual async Task<List<TGetOutputDto>> GetManyAsync(List<TKey> idList)
         {
             var list = new List<TGetOutputDto>();
@@ -71,7 +70,7 @@ namespace IczpNet.AbpCommons
             return list;
         }
 
-        [HttpGet]
+        //[HttpGet]
         public override async Task<PagedResultDto<TGetListOutputDto>> GetListAsync(TGetListInput input)
         {
             await CheckGetListPolicyAsync(input);
@@ -101,7 +100,7 @@ namespace IczpNet.AbpCommons
             return CheckGetListPolicyAsync();
         }
 
-        [HttpPost]
+        //[HttpPost]
         public override async Task<TGetOutputDto> CreateAsync(TCreateInput input)
         {
             await CheckCreatePolicyAsync(input);
@@ -136,7 +135,7 @@ namespace IczpNet.AbpCommons
             return Task.CompletedTask;
         }
 
-        [HttpPost]
+        //[HttpPost]
         public override async Task<TGetOutputDto> UpdateAsync(TKey id, TUpdateInput input)
         {
             await CheckUpdatePolicyAsync(id, input);
@@ -170,7 +169,7 @@ namespace IczpNet.AbpCommons
             return Task.CompletedTask;
         }
 
-        [HttpPost]
+        //[HttpPost]
         public override async Task DeleteAsync(TKey id)
         {
             await CheckDeletePolicyAsync(id);
@@ -201,7 +200,7 @@ namespace IczpNet.AbpCommons
             return Task.CompletedTask;
         }
 
-        [HttpPost]
+        //[HttpPost]
         public virtual async Task DeleteManyAsync(List<TKey> idList)
         {
             foreach (var id in idList)
