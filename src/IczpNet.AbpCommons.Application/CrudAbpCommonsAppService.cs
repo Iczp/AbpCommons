@@ -155,7 +155,7 @@ namespace IczpNet.AbpCommons
             return await MapToGetOutputDtoAsync(entity);
         }
 
-        protected virtual Task CheckUpdatePolicyAsync(TKey id, TUpdateInput input1)
+        protected virtual Task CheckUpdatePolicyAsync(TKey id, TUpdateInput input)
         {
             return CheckUpdatePolicyAsync();
         }

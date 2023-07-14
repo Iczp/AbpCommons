@@ -16,38 +16,47 @@ public static class PagedListExtensions
         IAsyncQueryableExecuter asyncExecuter,
         IObjectMapper objectMapper,
         int maxResultCount = 10,
-        int skipCount = 0, 
+        int skipCount = 0,
         string sorting = null,
         Func<IQueryable<T>, IQueryable<T>> queryableAction = null,
         Func<List<T>, Task<List<T>>> entityAction = null)
     {
         var totalCount = await asyncExecuter.CountAsync(query);
 
-        if (!sorting.IsNullOrWhiteSpace())
+        var items = new List<TOuputDto>();
+
+        if (totalCount > 0 && totalCount > skipCount)
         {
-            query = query.OrderBy(sorting);
+            if (!sorting.IsNullOrWhiteSpace())
+            {
+                query = query.OrderBy(sorting);
+            }
+            else if (queryableAction != null)
+            {
+                query = queryableAction.Invoke(query);
+            }
+
+            if (totalCount >= maxResultCount)
+            {
+                query = ApplyPaging(query, skipCount, maxResultCount);
+            }
+
+            var entities = await asyncExecuter.ToListAsync(query);
+
+            if (entityAction != null)
+            {
+                entities = await entityAction?.Invoke(entities);
+            }
+
+            items = objectMapper.Map<List<T>, List<TOuputDto>>(entities);
         }
-        else if (queryableAction != null)
-        {
-            query = queryableAction.Invoke(query);
-        }
-        else
-        {
-
-        }
-
-        query = query.PageBy(skipCount, maxResultCount);
-
-        var entities = await asyncExecuter.ToListAsync(query);
-
-        if (entityAction != null)
-        {
-            entities = await entityAction?.Invoke(entities);
-        }
-
-        var items = objectMapper.Map<List<T>, List<TOuputDto>>(entities);
 
         return new PagedResultDto<TOuputDto>(totalCount, items);
+    }
+
+    private static IQueryable<T> ApplyPaging<T>(IQueryable<T> query, int skipCount, int maxResultCount)
+    {
+        return query.PageBy(skipCount, maxResultCount);
     }
 
     public static Task<PagedResultDto<TOuputDto>> ToPagedListAsync<T, TOuputDto>(
