@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IIsEnabled
 {
-    public interface IIsEnabled
-    {
-        bool IsEnabled { get; }
-    }
+    bool IsEnabled { get; }
 }

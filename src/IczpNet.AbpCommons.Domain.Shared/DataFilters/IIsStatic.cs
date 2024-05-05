@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IIsStatic
 {
-    public interface IIsStatic
-    {
-        bool IsStatic { get; }
-    }
+    bool IsStatic { get; }
 }

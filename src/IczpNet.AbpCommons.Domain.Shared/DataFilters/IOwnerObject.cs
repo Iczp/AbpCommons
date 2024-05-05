@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IOwnerObject<T>
 {
-   public interface IOwnerObject<T>
-    {
-        T Owner { get; }
-    }
+    T Owner { get; }
 }

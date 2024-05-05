@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface ICode
 {
-    public interface ICode
-    {
-        string Code { get; }
-    }
+    string Code { get; }
 }

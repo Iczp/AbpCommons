@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IIsActive
 {
-    public interface IIsActive
-    {
-        bool IsActive { get; }
-    }
+    bool IsActive { get; }
 }

@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IIsDefault
 {
-    public interface IIsDefault
-    {
-        bool IsDefault { get; }
-    }
+    bool IsDefault { get; }
 }

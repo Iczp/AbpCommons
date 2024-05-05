@@ -1,11 +1,10 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
-{
-    public interface IOwner<TKey, T> : IOwner<TKey>, IOwnerObject<T>
-    {
-    }
+﻿namespace IczpNet.AbpCommons.DataFilters;
 
-    public interface IOwner<TKey>
-    {
-        TKey OwnerId { get; }
-    }
+public interface IOwner<TKey, T> : IOwner<TKey>, IOwnerObject<T>
+{
+}
+
+public interface IOwner<TKey>
+{
+    TKey OwnerId { get; }
 }

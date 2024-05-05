@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IKeyword
 {
-    public interface IKeyword
-    {
-        string Keyword { get; }
-    }
+    string Keyword { get; }
 }

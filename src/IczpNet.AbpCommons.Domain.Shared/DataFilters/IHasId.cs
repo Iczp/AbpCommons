@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IHasId<TKey>
 {
-    public interface IHasId<TKey>
-    {
-        TKey Id { get; }
-    }
+    TKey Id { get; }
 }

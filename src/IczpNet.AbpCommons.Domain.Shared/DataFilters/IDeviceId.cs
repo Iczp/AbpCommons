@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IDeviceId
 {
-    public interface IDeviceId
-    {
-        string DeviceId { get; }
-    }
+    string DeviceId { get; }
 }

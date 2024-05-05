@@ -38,6 +38,14 @@ public static class ImageHelper
         return dir;
     }
 
+    public static byte[] GetEmptyPngBytes(int width, int height)
+    {
+        using var bitmap = new Bitmap(width, height);
+        using var ms = new MemoryStream();
+        bitmap.Save(ms, ImageFormat.Png);
+        return ms.ToArray();
+    }
+
     /// <summary>
     /// 设置圆角
     /// </summary>

@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface ISorting
 {
-    public interface ISorting
-    {
-        double Sorting { get; }
-    }
+    double Sorting { get; }
 }

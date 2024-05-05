@@ -1,8 +1,7 @@
-﻿namespace IczpNet.AbpCommons.DataFilters
+﻿namespace IczpNet.AbpCommons.DataFilters;
+
+public interface IHasPinyin
 {
-    public interface IHasPinyin
-    {
-        string Name_Py { get; }
-        string Name_Pinyin { get; }
-    }
+    string Name_Py { get; }
+    string Name_Pinyin { get; }
 }
