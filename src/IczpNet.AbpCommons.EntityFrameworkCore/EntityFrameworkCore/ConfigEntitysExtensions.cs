@@ -31,7 +31,8 @@ namespace IczpNet.AbpCommons.EntityFrameworkCore
 
             var entityTypes = moduleType.Assembly.GetExportedTypes()
                 .Where(t => t.Namespace.StartsWith(entityNamespace) && !t.IsAbstract
-                    && t.GetInterfaces().Any(x => typeof(IEntity).IsAssignableFrom(x) || x.IsGenericType && typeof(IEntity<>).IsAssignableFrom(x.GetGenericTypeDefinition())));
+                    && t.GetInterfaces().Any(x => typeof(IEntity).IsAssignableFrom(x) || x.IsGenericType && typeof(IEntity<>).IsAssignableFrom(x.GetGenericTypeDefinition())))
+                .Where(t => t.GetCustomAttribute<NotMappedAttribute>() == null);
 
             foreach (var t in entityTypes)
             {
