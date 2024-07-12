@@ -1,7 +1,6 @@
-﻿namespace IczpNet.AbpCommons.Dtos
+﻿namespace IczpNet.AbpCommons.Dtos;
+
+public class IdInput<Tkey>
 {
-    public class IdInput<Tkey>
-    {
-        public Tkey Id { get; set; }
-    }
+    public Tkey Id { get; set; }
 }

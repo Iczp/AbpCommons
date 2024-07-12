@@ -1,10 +1,15 @@
 ﻿using IczpNet.AbpCommons.DataFilters;
+using IczpNet.AbpCommons.Dtos;
+using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Linq;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using IczpNet.AbpCommons.Extensions;
 
 namespace IczpNet.AbpCommons
 {
@@ -42,6 +47,40 @@ namespace IczpNet.AbpCommons
         {
 
         }
+
+        protected virtual async Task<PagedResultDto<TOuputDto>> GetPagedListAsync<T, TOuputDto>(
+        IQueryable<T> query,
+        PagedAndSortedResultRequestDto input,
+        Func<IQueryable<T>, IQueryable<T>> queryableAction = null,
+        Func<List<T>, Task<List<T>>> entityAction = null)
+        {
+            return await query.ToPagedListAsync<T, TOuputDto>(AsyncExecuter, ObjectMapper, input, queryableAction, entityAction);
+        }
+        protected virtual async Task<PagedResultDto<T>> GetPagedListAsync<T>(
+            IQueryable<T> query,
+            PagedAndSortedResultRequestDto input,
+            Func<IQueryable<T>, IQueryable<T>> queryableAction = null,
+            Func<List<T>, Task<List<T>>> entityAction = null)
+        {
+            return await GetPagedListAsync<T, T>(query, input, queryableAction, entityAction);
+        }
+
+        protected virtual async Task<PagedResultDto<KeyValueDto<TType>>> GetEntityGroupListAsync<TType>(Func<IQueryable<TEntity>, IQueryable<TEntity>> queryable, GetListInput input, string policyName, Expression<Func<TEntity, TType>> keySelector)
+        {
+            await CheckPolicyAsync(policyName);
+
+            var query = queryable((await Repository.GetQueryableAsync()))
+                .GroupBy(keySelector)
+                .Select(x => new KeyValueDto<TType>()
+                {
+                    Key = x.Key,
+                    Count = x.Count()
+                })
+                ;
+
+            return await GetPagedListAsync(query, input);
+        }
+
 
         //[HttpGet]
         public override async Task<TGetOutputDto> GetAsync(TKey id)

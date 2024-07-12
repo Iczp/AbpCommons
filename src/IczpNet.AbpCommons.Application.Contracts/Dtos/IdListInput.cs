@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace IczpNet.AbpCommons.Dtos
+namespace IczpNet.AbpCommons.Dtos;
+
+public class IdListInput<Tkey>
 {
-    public class IdListInput<Tkey>
-    {
-        public List<Tkey> IdList { get; set; }
-    }
+    public List<Tkey> IdList { get; set; }
 }
