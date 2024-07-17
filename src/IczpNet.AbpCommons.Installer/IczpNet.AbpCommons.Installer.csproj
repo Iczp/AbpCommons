@@ -3,15 +3,18 @@
 	<Import Project="..\..\common.props" />
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
 		<RootNamespace>IczpNet.AbpCommons</RootNamespace>
-		<Authors>IczpNet</Authors>
+		<TargetFramework>net8.0</TargetFramework>
+		<Version>0.8.0</Version>
 		<RepositoryUrl>https://github.com/Iczp/AbpCommons.git</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/Iczp/AbpCommons.git</PackageProjectUrl>
-		<Version>0.8.0</Version>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<Authors>IczpNet</Authors>
+		<PackageIcon>IczpNet.jpg</PackageIcon>
+		<Copyright>(c) iczp.net</Copyright>
+		<Description>copyright (c) www.iczp.net</Description>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -24,10 +27,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Include="..\..\README.md" Link="README.md">
-	    <PackagePath>\</PackagePath>
-	    <Pack>True</Pack>
-	  </None>
+		<None Include="..\..\IczpNet.jpg" Link="IczpNet.jpg">
+			<PackagePath>\</PackagePath>
+			<Pack>True</Pack>
+		</None>
+		<None Include="..\..\README.md" Link="README.md">
+			<PackagePath>\</PackagePath>
+			<Pack>True</Pack>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
