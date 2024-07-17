@@ -18,6 +18,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Utils\ImageHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
 		<None Include="..\..\IczpNet.jpg" Link="IczpNet.jpg">
 			<PackagePath>\</PackagePath>
 			<Pack>True</Pack>
