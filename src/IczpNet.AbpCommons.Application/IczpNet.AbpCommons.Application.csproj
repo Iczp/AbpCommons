@@ -29,8 +29,8 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Volo.Abp.AutoMapper" Version="8.2.0" />
-    <PackageReference Include="Volo.Abp.Ddd.Application" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.AutoMapper" Version="9.0.0" />
+    <PackageReference Include="Volo.Abp.Ddd.Application" Version="9.0.0" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Application.Contracts\IczpNet.AbpCommons.Application.Contracts.csproj" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Domain\IczpNet.AbpCommons.Domain.csproj" />
   </ItemGroup>

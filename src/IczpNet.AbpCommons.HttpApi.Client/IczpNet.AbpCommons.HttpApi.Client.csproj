@@ -18,7 +18,7 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Volo.Abp.Http.Client" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Http.Client" Version="9.0.0" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Application.Contracts\IczpNet.AbpCommons.Application.Contracts.csproj" />
   </ItemGroup>
 

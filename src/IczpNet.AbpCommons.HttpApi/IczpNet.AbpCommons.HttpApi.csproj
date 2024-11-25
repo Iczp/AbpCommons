@@ -29,7 +29,7 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Volo.Abp.AspNetCore.Mvc" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc" Version="9.0.0" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Application.Contracts\IczpNet.AbpCommons.Application.Contracts.csproj" />
   </ItemGroup>
 
