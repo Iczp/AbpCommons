@@ -2,47 +2,65 @@
 
 An abp module that provides standard tree structure entity implement.
 
+## Push to Nuget
 
+1. 在项目根目录执行以下命令，将项目打包为 nuget 包
+
+```bash
+ scripts/pushToNuget.ps1
+```
 
 ## Usage
 
-Add `DependsOn(typeof(AbpCommonsXxxModule))` attribute to configure the module dependencies. 
+Add `DependsOn(typeof(AbpCommonsXxxModule))` attribute to configure the module dependencies.
 
 1. Application
 
 ```C#
 [DependsOn(typeof(AbpCommonsApplicationModule))]
 ```
+
 2. Application.Contracts
+
 ```C#
 [DependsOn(typeof(AbpCommonsApplicationContractsModule))]
 ```
+
 3. Domain.Shared
+
 ```C#
 [DependsOn(typeof(AbpCommonsDomainSharedModule))]
 ```
+
 4. EntityFrameworkCore
+
 ```C#
 [DependsOn(typeof(AbpCommonsEntityFrameworkCoreModule))]
 ```
+
 5. HttpApi
+
 ```C#
 [DependsOn(typeof(AbpCommonsHttpApiModule))]
 ```
+
 6. HttpApi.Client
+
 ```C#
 [DependsOn(typeof(AbpCommonsHttpApiClientModule))]
 ```
+
 7. Installer
+
 ```C#
 [DependsOn(typeof(AbpCommonsInstallerModule))]
 ```
+
 8. MongoDb
+
 ```C#
 [DependsOn(typeof(AbpCommonsMongoDbModule))]
 ```
-
-
 
 ## Internal structure
 
@@ -81,8 +99,6 @@ public class AbpCommonsDomainModule : AbpModule
 }
 
 ```
-
-
 
 ### Attributes
 
@@ -165,7 +181,7 @@ namespace IczpNet.AbpCommons.Attributes
 
 ### DataFilters
 
-####  ICode
+#### ICode
 
 ```C#
 namespace IczpNet.AbpCommons.DataFilters
@@ -283,8 +299,6 @@ namespace IczpNet.AbpCommons.DataFilters
 
 ```
 
-
-
 ### Enums
 
 #### ExpressTypeEnum
@@ -353,8 +367,6 @@ namespace IczpNet.AbpCommons.Enums
 
 ```
 
-
-
 ### Models
 
 #### FilterInput
@@ -420,8 +432,6 @@ namespace IczpNet.AbpCommons.Models
 }
 
 ```
-
-
 
 ### Extensions
 
@@ -533,7 +543,7 @@ public static class EnumerableExtensions
         return source.NullToEmpty().ToList();
     }
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="list"></param>
@@ -543,7 +553,7 @@ public static class EnumerableExtensions
         return list.NullToEmpty().Any();
     }
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="list"></param>
@@ -852,7 +862,7 @@ public static class QueryExtensions
         }, source.Expression, Expression.Quote(expression));
         return (IQueryable<T>)source.Provider.CreateQuery(expression2);
     }
-    
+
 }
 
 ```
@@ -1273,8 +1283,6 @@ namespace IczpNet.AbpCommons
 
 ```
 
-
-
 ## RepositoryUrl
 
 https://github.com/Iczp/AbpCommons.git
@@ -1282,8 +1290,6 @@ https://github.com/Iczp/AbpCommons.git
 ## PackageProjectUrl
 
 https://github.com/Iczp/AbpCommons.git
-
-
 
 ## Utils
 
@@ -1700,7 +1706,7 @@ public static class ImageHelper
         }
     }
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="source"></param>
     /// <param name="maxLength"></param>
@@ -2401,4 +2407,3 @@ public static class ReflectHelper
 }
 
 ```
-
