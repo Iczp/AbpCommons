@@ -20,7 +20,7 @@ if (-not $newVersion) {
 Get-ChildItem -Path $projectsPath -Recurse -Filter *.csproj | ForEach-Object {
     $file = $_.FullName
     $fileName = $_.Name
-       # 更新版本号
+    # 更新版本号
     if ((Get-Content $file) -match '<Version>') {
         (Get-Content $file) -replace '<Version>.*<\/Version>', "<Version>$newVersion</Version>" | Set-Content $file
         Write-Host "已更新版本号[$newVersion]: $fileName" -ForegroundColor Green
@@ -73,50 +73,54 @@ if ([string]::IsNullOrWhiteSpace($confirmPush)) {
     $confirmPush = "y"
 }
 
+if (!$confirmPush -eq "y") {
+    Write-Host "推送到 NuGet 源已取消。" -ForegroundColor Yellow
+    exit 1
+}
 
-if ($confirmPush -eq "y") {
-    # 从文件读取 NuGet API Key
-    if (Test-Path $nugetKeyFilePath) {
-        $nugetApiKey = Get-Content $nugetKeyFilePath -ErrorAction Stop
-        Write-Host "已成功读取 NuGet API Key: ******" -ForegroundColor Green
-        Write-Host "推送地址: $nugetSource" -ForegroundColor Green
-    }
-    else {
-        Write-Error "未找到 NuGet API Key 文件，请检查路径：$nugetKeyFilePath"
-
-        $nugetApiKey = Read-Host "请输入NuGet API Key:" 
-
-        if ([string]::IsNullOrWhiteSpace($nugetApiKey)) {
-            Write-Error "NuGet API Key为空."
-            exit 0
-        }
-    }
-
-    Write-Host "开始推送到 NuGet 源:$nugetSource" -ForegroundColor Cyan
-    # dotnet nuget push "../src/*/bin/Release/*$newVersion.nupkg" --skip-duplicate -k $nugetKeyFilePath --source $nugetSource
-
-    $nupkgFiles = Get-ChildItem -Path $projectsPath -Recurse -Filter *$newVersion.nupkg
-    $totalFiles = $nupkgFiles.Count
-    $index = 0
-    $nupkgFiles | ForEach-Object {
-        $nupkgFile = $_.FullName
-        $nupkgFileName = $_.Name
-        $index++
-        Write-Host "[$index/$totalFiles]dotnet nuget push $nupkgFileName" -ForegroundColor Cyan
-        # dotnet nuget push $nupkgFile --api-key $nugetApiKey --skip-duplicate --source $nugetSource
-        if ($?) {
-            Write-Host "[$index/$totalFiles]推送成功 $nupkgFileName" -ForegroundColor Green
-        }
-        else {
-            Write-Error "[$index/$totalFiles]推送失败: $nupkgFile" 
-            # exit 1
-        }
-    }
-    Write-Host "所有包已成功推送到 NuGet 源。" -ForegroundColor Green
-
-    Write-Host "查看 https://www.nuget.org/packages?q=$pkg" -ForegroundColor Green
-    
+# 从文件读取 NuGet API Key
+if (Test-Path $nugetKeyFilePath) {
+    $nugetApiKey = Get-Content $nugetKeyFilePath -ErrorAction Stop
+    Write-Host "已成功读取 NuGet API Key: ******" -ForegroundColor Green
+    Write-Host "推送地址: $nugetSource" -ForegroundColor Green
 }
 else {
-    Write-Host "推送到 NuGet 源已取消。" -ForegroundColor Yellow
+    Write-Error "未找到 NuGet API Key 文件，请检查路径：$nugetKeyFilePath"
+
+    $nugetApiKey = Read-Host "请输入NuGet API Key:" 
+
+    if ([string]::IsNullOrWhiteSpace($nugetApiKey)) {
+        Write-Error "NuGet API Key为空."
+        exit 0
+    }
 }
+
+Write-Host "开始推送到 NuGet 源:$nugetSource" -ForegroundColor Cyan
+# dotnet nuget push "../src/*/bin/Release/*$newVersion.nupkg" --skip-duplicate -k $nugetKeyFilePath --source $nugetSource
+
+$nupkgFiles = Get-ChildItem -Path $projectsPath -Recurse -Filter *$newVersion.nupkg
+$totalFiles = $nupkgFiles.Count
+$index = 0
+$success = 0
+$nupkgFiles | ForEach-Object {
+    $nupkgFile = $_.FullName
+    $nupkgFileName = $_.Name
+    $index++
+    Write-Host "[$index/$totalFiles]dotnet nuget push $nupkgFileName" -ForegroundColor Cyan
+    dotnet nuget push $nupkgFile --api-key $nugetApiKey --skip-duplicate --source $nugetSource
+    if ($?) {
+        $success++
+        Write-Host "[$index/$totalFiles]推送成功 $nupkgFileName" -ForegroundColor Green
+    }
+    else {
+        Write-Error "[$index/$totalFiles]推送失败: $nupkgFile" 
+        # exit 1
+    }
+}
+if ($success = $totalFiles) {
+    Write-Host "所有包[$totalFiles]已成功推送到 NuGet 源。" -ForegroundColor Green
+}
+else {
+    Write-Error "有 $($totalFiles-$success) 个包未推送成功."
+}
+Write-Host "查看 https://www.nuget.org/packages?q=$pkg" -ForegroundColor Green
