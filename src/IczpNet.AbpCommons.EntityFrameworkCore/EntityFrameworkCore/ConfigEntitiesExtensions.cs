@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Reflection;
@@ -12,18 +13,18 @@ namespace IczpNet.AbpCommons.EntityFrameworkCore;
 
 public static class ConfigEntitiesExtensions
 {
-    public static void ConfigEntitys<T>(this ModelBuilder builder, string dbTablePrefix, string dbSchema) where T : AbpModule
+    public static void ConfigEntities<T>(this ModelBuilder builder, string dbTablePrefix, string dbSchema, Action<EntityTypeBuilder> action = null) where T : AbpModule
     {
-        builder.ConfigEntities(typeof(T), dbTablePrefix, dbSchema);
+        builder.ConfigEntities(typeof(T), dbTablePrefix, dbSchema, action);
     }
-    public static void ConfigEntities<T>(this ModelBuilder builder, Func<Type, string> getTableName, string dbSchema) where T : AbpModule
+    public static void ConfigEntities<T>(this ModelBuilder builder, Func<Type, string> getTableName, string dbSchema, Action<EntityTypeBuilder> action = null) where T : AbpModule
     {
-        builder.ConfigEntities(typeof(T), getTableName, dbSchema);
+        builder.ConfigEntities(typeof(T), getTableName, dbSchema, action);
     }
 
-    public static void ConfigEntities(this ModelBuilder builder, Type moduleType, string dbTablePrefix, string dbSchema)
+    public static void ConfigEntities(this ModelBuilder builder, Type moduleType, string dbTablePrefix, string dbSchema, Action<EntityTypeBuilder> action = null)
     {
-        builder.ConfigEntities(moduleType, entityType => dbTablePrefix + "_" + entityType.Name, dbSchema);
+        builder.ConfigEntities(moduleType, entityType => dbTablePrefix + "_" + entityType.Name, dbSchema, action);
     }
 
     public static void ConfigEntities(this ModelBuilder builder, Type moduleType, Func<Type, string> getTableName, string dbSchema, Action<EntityTypeBuilder> action = null)
@@ -55,7 +56,11 @@ public static class ConfigEntitiesExtensions
                     }
                 });
 
+                //注释
                 b.ConfigureComments();
+
+                //设置默认值
+                b.ConfigureDefaultValues();
 
                 b.ConfigureByConvention();
 
@@ -94,6 +99,25 @@ public static class ConfigEntitiesExtensions
                     continue;
                 }
                 fkProp.SetComment(fkDesc.Comment);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 设置默认值
+    /// </summary>
+    /// <param name="b"></param>
+    public static void ConfigureDefaultValues(this EntityTypeBuilder b)
+    {
+        //字段默认值
+        foreach (var p in b.Metadata.GetDeclaredProperties())
+        {
+            var propDefaultValue = p.PropertyInfo?.GetSingleAttributeOrNull<DefaultValueAttribute>();
+
+            if (propDefaultValue != null && propDefaultValue.Value != null)
+            {
+                b.Property(p.Name).HasDefaultValue(propDefaultValue.Value);
+                continue;
             }
         }
     }
