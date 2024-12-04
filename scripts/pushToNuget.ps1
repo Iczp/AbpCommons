@@ -1,3 +1,4 @@
+$defaultVersion = "0.9.0.2"
 
 $solutionFiles = Get-Item -Path ".\*.sln"
 
@@ -9,7 +10,7 @@ $nugetSource = "https://api.nuget.org/v3/index.json" # NuGet 推送地址
 
 Write-Host "发现: $($solutionFiles.Name)" -ForegroundColor Yellow
 
-$defaultVersion = "0.9.0.1"
+
 $newVersion = Read-Host "请输入新的版本号 (例如 $defaultVersion)"
 if (-not $newVersion) {
     $newVersion = $defaultVersion
