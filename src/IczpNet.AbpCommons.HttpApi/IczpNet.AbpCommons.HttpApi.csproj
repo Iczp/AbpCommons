@@ -1,11 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <Import Project="..\..\common.props" />
 
 	<PropertyGroup>
 		<RootNamespace>IczpNet.AbpCommons</RootNamespace>
-		<TargetFramework>net8.0</TargetFramework>
-		<Version>0.8.2</Version>
+		<TargetFramework>net9.0</TargetFramework>
+		<Version>0.9.0.3</Version>
 		<RepositoryUrl>https://github.com/Iczp/AbpCommons.git</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/Iczp/AbpCommons.git</PackageProjectUrl>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -18,24 +18,40 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\..\IczpNet.jpg" Link="IczpNet.jpg">
+	  <Content Remove="C:\Users\ZP\.nuget\packages\volo.abp.aspnetcore.mvc\9.0.0\contentFiles\any\net9.0\Volo.Abp.AspNetCore.Mvc.abppkg.analyze.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="IczpNet.AbpCommons.HttpApi.abppkg.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <AdditionalFiles Include="C:\Users\ZP\.nuget\packages\volo.abp.aspnetcore.mvc\9.0.0\contentFiles\any\net9.0\Volo.Abp.AspNetCore.Mvc.abppkg.analyze.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="IczpNet.AbpCommons.HttpApi.abppkg.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Page Include="..\..\IczpNet.jpg" Link="IczpNet.jpg">
 			<PackagePath>\</PackagePath>
 			<Pack>True</Pack>
-		</None>
-		<None Include="..\..\README.md" Link="README.md">
+		</Page>
+		<Page Include="..\..\README.md" Link="README.md">
 			<PackagePath>\</PackagePath>
 			<Pack>True</Pack>
-		</None>
+		</Page>
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Volo.Abp.AspNetCore.Mvc" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc" Version="9.0.0" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Application.Contracts\IczpNet.AbpCommons.Application.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Update="ConfigureAwait.Fody" Version="3.3.2" />
-    <PackageReference Update="Fody" Version="6.8.1">
+    <PackageReference Update="Fody" Version="6.9.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
