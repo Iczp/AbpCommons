@@ -1,0 +1,44 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: Publish NuGet Package
+
+on:
+  push:
+    branches:
+      - 'release/v*' # 触发条件：推送到以 'release/v' 开头的分支
+    # tags:
+    #   - 'v*' # 触发条件：推送到以 'v' 开头的标签
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # 从标签中提取版本号（假设标签格式为 vX.Y.Z）
+      - name: Extract version from tag
+        id: extract_version
+        run: echo "::set-output name=version::${GITHUB_REF#refs/tags/v}"
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '9.0.x' # 使用 .NET 9.0.x SDK
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Build project
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Pack project
+        run: dotnet pack --configuration Release --no-build --output .
+
+      - name: Push NuGet package
+        run: |
+          dotnet nuget push **/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
