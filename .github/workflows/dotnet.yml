@@ -31,7 +31,7 @@ jobs:
 
       - name: Push NuGet package
         run: |
-          dotnet nuget push **/*.nupkg -s ${{ vars.NUGET_API_SOURCE }} -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+          dotnet nuget push **/*0.9.*.nupkg -s ${{ vars.NUGET_API_SOURCE }} -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
         # env:
         #   NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         #   NUGET_API_SOURCE: ${{ vars.NUGET_API_SOURCE }}
