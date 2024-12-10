@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NUglify;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -84,5 +85,23 @@ public static class EnumerableExtensions
     public static bool IsAny<T>(this IEnumerable<T> list, Func<T, bool> predicate)
     {
         return list.NullToEmpty().Any(predicate);
+    }
+
+    /// <summary>
+    /// 查找列表中的重复项，基于提供的键选择器。
+    /// </summary>
+    /// <typeparam name="T">项的类型。</typeparam>
+    /// <typeparam name="TKey">键的类型。</typeparam>
+    /// <param name="itemList">包含项的列表。</param>
+    /// <param name="keySelector">用于选择键的函数。</param>
+    /// <returns>包含重复项的列表。</returns>
+    public static List<T> FindDuplicateItems<T, TKey>(this IEnumerable<T> itemList, Func<T, TKey> keySelector)
+    {
+        // 使用LINQ的GroupBy和Where来找出重复的项
+        return itemList
+            .GroupBy(keySelector)
+            .Where(g => g.Count() > 1)
+            .SelectMany(g => g.Skip(1)) // 只返回重复项中的额外实例，保留第一个实例以避免误报
+            .ToList();
     }
 }
