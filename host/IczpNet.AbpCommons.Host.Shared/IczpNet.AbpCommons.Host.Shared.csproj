@@ -5,7 +5,8 @@
 	<PropertyGroup>
 		<RootNamespace>IczpNet.AbpCommons</RootNamespace>
 		<TargetFramework>net9.0</TargetFramework>
-		<Version>0.9.0.903</Version>
+		<!--<TargetFrameworks>netstandard2.0;netstandard2.1;net9.0</TargetFrameworks>-->
+		<Version>0.9.1.903</Version>
 		<RepositoryUrl>https://github.com/Iczp/AbpCommons.git</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/Iczp/AbpCommons.git</PackageProjectUrl>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
