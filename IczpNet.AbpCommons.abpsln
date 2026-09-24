@@ -1,0 +1,15 @@
+{
+  "id": "54f92aba-9c14-4fca-9510-51d6670d6524",
+  "template": "empty",
+  "modules": {
+    "IczpNet.AbpCommons": {
+      "path": "IczpNet.AbpCommons.abpmdl"
+    }
+  },
+  "kind": "Abp",
+  "runProfiles": {
+    "Default": {
+      "path": "etc/abp-studio/run-profiles/Default.abprun.json"
+    }
+  }
+}

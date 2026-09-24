@@ -1,0 +1,23 @@
+{
+  "folders": {
+    "items": {
+      "IczpNet.AbpCommons": {}
+    }
+  },
+  "applications": {
+    "IczpNet.AbpCommons.HttpApi.Host": {
+      "type": "dotnet-project",
+      "path": "../../../host/IczpNet.AbpCommons.HttpApi.Host/IczpNet.AbpCommons.HttpApi.Host.csproj",
+      "launchUrl": "https://localhost:44334",
+      "folder": "IczpNet.AbpCommons",
+      "runnable": true
+    },
+    "IczpNet.AbpCommons.AuthServer": {
+      "type": "dotnet-project",
+      "path": "../../../host/IczpNet.AbpCommons.AuthServer/IczpNet.AbpCommons.AuthServer.csproj",
+      "launchUrl": "https://localhost:44393",
+      "folder": "IczpNet.AbpCommons",
+      "runnable": true
+    }
+  }
+}

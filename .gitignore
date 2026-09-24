@@ -263,3 +263,7 @@ host/IczpNet.AbpCommons.Blazor.Server.Host/Logs/logs.txt
 
 #nuget.org apikey
 apikey.md
+
+
+# ABP Studio
+**/.abpstudio/
