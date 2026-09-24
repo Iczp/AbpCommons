@@ -1,3 +1,4 @@
 {
-  "role": "host.auth"
+  "role": "host.auth",
+  "projectId": "42cacaac-5d20-4105-8907-1e087f11e4b5"
 }
