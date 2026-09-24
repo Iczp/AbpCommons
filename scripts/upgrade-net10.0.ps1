@@ -6,11 +6,12 @@
     此脚本专为各种类型的 ABP vNext 项目设计，具备：
     1. 运行时先展示详尽的升级计划清单，确认后再执行。
     2. 自适应路径识别，批量更新 .csproj（net10.0）、props、global.json。
-    3. 自动适配代码中的 Microsoft.OpenApi 2.x 命名空间变动（using Microsoft.OpenApi.Models -> using Microsoft.OpenApi）。
-    4. 幂等检测并处理必要依赖（如 IdentityModel），绝不产生重复项。
-    5. 执行 ABP CLI 同步更新 (abp update -v 10.6.1)。
-    6. 严格的编译校验拦截：仅在项目编译 100% 成功通过后，才进入数据库迁移阶段！
-    7. 多项目 EF Core 数据库迁移支持 (统一名称如 Abp10.6.1)。
+    3. 自动适配代码中的 Microsoft.OpenApi 2.x 命名空间 (using Microsoft.OpenApi.Models -> using Microsoft.OpenApi)。
+    4. 自动适配 OpenIddict 7.x 官方重命名端点 (Endpoints.Logout -> Endpoints.EndSession, Endpoints.Device -> Endpoints.DeviceAuthorization)。
+    5. 自动清理无用的 using IdentityModel; 与重复 PackageReference 项。
+    6. 执行 ABP CLI 同步更新 (abp update -v 10.6.1)。
+    7. 严格的编译校验拦截：仅在项目编译 100% 成功通过后，才进入数据库迁移阶段！
+    8. 多项目 EF Core 数据库迁移支持 (统一名称如 Abp10.6.1)。
 .PARAMETER ProjectsPath
     解决方案或项目根目录路径，默认自动探测（如果在 scripts 目录，则自动取上一级）。
 .PARAMETER AbpVersion
@@ -156,7 +157,7 @@ Write-Host "   - 业务版本号  : $newVersion" -ForegroundColor White
 Write-Host "   - 核心框架    : $TargetFramework" -ForegroundColor White
 Write-Host "   - Volo.Abp.*  : 全部升级至 $AbpVersion" -ForegroundColor White
 Write-Host "   - EF/ASP.NET  : Microsoft.* 核心包升级至 $DotNetVersion" -ForegroundColor White
-Write-Host "   - 代码兼容调整: 自动适配 Microsoft.OpenApi 2.x 命名空间 (using Microsoft.OpenApi.Models -> using Microsoft.OpenApi)" -ForegroundColor White
+Write-Host "   - 代码兼容自愈: 自动适配 OpenApi 2.x 命名空间及 OpenIddict 7.x 端点重命名" -ForegroundColor White
 
 Write-Host "`n2. 扫描到的待更新项目列表 (共 $($planProjectList.Count) 个工程):" -ForegroundColor Yellow
 $planProjectList | Format-Table -AutoSize | Out-String | Write-Host -ForegroundColor Gray
@@ -183,7 +184,7 @@ if ($candidateMigrationProjects.Count -gt 0) {
 
 Write-Host "`n5. 计划执行的升级流水线:" -ForegroundColor Yellow
 Write-Host "   [步骤 1] 写入或更新 global.json (.NET 10 SDK)" -ForegroundColor White
-Write-Host "   [步骤 2] 批量修改公共 props、所有 .csproj 及代码适配 (OpenApi 2.x 命名空间)" -ForegroundColor White
+Write-Host "   [步骤 2] 批量修改公共 props、所有 .csproj 及代码适配 (OpenApi 与 OpenIddict)" -ForegroundColor White
 Write-Host "   [步骤 3] 运行官方 CLI 命令: abp update -v $AbpVersion" -ForegroundColor White
 Write-Host "   [步骤 4] 执行 dotnet restore 依赖还原" -ForegroundColor White
 Write-Host "   [步骤 5] 执行 dotnet build 编译严格校验 (若失败直接中止，不执行迁移)" -ForegroundColor White
@@ -234,7 +235,7 @@ if (-not (Test-Path $globalJsonPath)) {
 }
 
 # -------------------------------------------------------------------------
-# [步骤 2] 更新 props、.csproj 并自动适配 OpenApi 2.x 命名空间
+# [步骤 2] 更新 props、.csproj 并自愈代码兼容项
 # -------------------------------------------------------------------------
 Write-Host "`n[步骤 2/6] 更新公共 props、.csproj 项目文件及代码适配..." -ForegroundColor Cyan
 
@@ -254,14 +255,33 @@ foreach ($propFile in $propsFiles) {
     }
 }
 
-# 2.2 自动适配代码中的 Microsoft.OpenApi 2.x 变更 (Microsoft.OpenApi.Models -> Microsoft.OpenApi)
+# 2.2 自动适配代码中的 OpenApi 2.x 与 OpenIddict 7.x 变更
 $allCsFiles = Get-ChildItem -Path $ProjectsPath -Recurse -Filter *.cs -File -ErrorAction SilentlyContinue
 foreach ($cs in $allCsFiles) {
     $csText = Get-Content $cs.FullName -Raw -Encoding utf8 -ErrorAction SilentlyContinue
+    $origCs = $csText
+
+    # 适配 OpenApi 2.x
     if ($csText -match 'using\s+Microsoft\.OpenApi\.Models;') {
         $csText = $csText -replace 'using\s+Microsoft\.OpenApi\.Models;', 'using Microsoft.OpenApi;'
+    }
+
+    # 适配 OpenIddict 7.x 端点重命名
+    if ($csText -match 'OpenIddictConstants\.Permissions\.Endpoints\.Logout') {
+        $csText = $csText -replace 'OpenIddictConstants\.Permissions\.Endpoints\.Logout', 'OpenIddictConstants.Permissions.Endpoints.EndSession'
+    }
+    if ($csText -match 'OpenIddictConstants\.Permissions\.Endpoints\.Device') {
+        $csText = $csText -replace 'OpenIddictConstants\.Permissions\.Endpoints\.Device(?!\w)', 'OpenIddictConstants.Permissions.Endpoints.DeviceAuthorization'
+    }
+
+    # 清理非必须的 using IdentityModel;
+    if ($cs.Name -eq 'AbpCommonsHttpApiHostModule.cs' -and $csText -match 'using\s+IdentityModel;\r?\n') {
+        $csText = [System.Text.RegularExpressions.Regex]::Replace($csText, 'using\s+IdentityModel;\r?\n', '')
+    }
+
+    if ($csText -ne $origCs) {
         [System.IO.File]::WriteAllText($cs.FullName, $csText, [System.Text.Encoding]::UTF8)
-        Write-Host "  已适配 OpenApi 2.x 命名空间: $($cs.Name)" -ForegroundColor Green
+        Write-Host "  已适配代码语法: $($cs.Name)" -ForegroundColor Green
     }
 }
 
@@ -308,26 +328,8 @@ foreach ($proj in $csprojFiles) {
         "`${1}$DotNetVersion`${2}"
     )
 
-    # 清理多余/错误的显式 Microsoft.OpenApi 引用 (Swashbuckle 10.6.1 已自带 2.7.5)
+    # 清理多余的显式 Microsoft.OpenApi 引用 (Swashbuckle 10.6.1 已自带 2.7.5)
     $content = [System.Text.RegularExpressions.Regex]::Replace($content, '\s*<PackageReference\s+Include="Microsoft\.OpenApi"[^>]*/>', '')
-
-    # 幂等处理 IdentityModel 依赖：若代码中使用了 IdentityModel 但项目未生效引入
-    $projCsFiles = Get-ChildItem -Path $proj.DirectoryName -Filter *.cs -Recurse -File -ErrorAction SilentlyContinue
-    $hasIdentityModelUsage = $false
-    foreach ($cs in $projCsFiles) {
-        $t = Get-Content $cs.FullName -Raw -ErrorAction SilentlyContinue
-        if ($t -match 'using\s+IdentityModel') { $hasIdentityModelUsage = $true; break }
-    }
-
-    if ($hasIdentityModelUsage) {
-        if ($content -match '<!--\s*<PackageReference Include="IdentityModel"[^>]*-->') {
-            # 解开原本被注释的项
-            $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<!--\s*<PackageReference Include="IdentityModel"[^>]*-->', '<PackageReference Include="IdentityModel" Version="7.0.0" />')
-        } elseif ($content -notmatch '<PackageReference\s+Include="IdentityModel"') {
-            # 仅在完全没有引用时插入一次
-            $content = [System.Text.RegularExpressions.Regex]::Replace($content, '</ItemGroup>', "    <PackageReference Include=`"IdentityModel`" Version=`"7.0.0`" />`r`n  </ItemGroup>", [System.Text.RegularExpressions.RegexOptions]::None)
-        }
-    }
 
     if ($content -ne $origContent) {
         [System.IO.File]::WriteAllText($file, $content, [System.Text.Encoding]::UTF8)
