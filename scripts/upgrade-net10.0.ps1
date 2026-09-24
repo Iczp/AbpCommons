@@ -169,9 +169,9 @@ if ($propsFiles.Count -gt 0) {
     }
 }
 
-Write-Host "`n4. 数据库迁移计划 (共探测到 $($candidateMigrationProjects.Count) 个迁移工程):" -ForegroundColor Yellow
-Write-Host "   - 迁移执行前置 : 必须在【.NET 编译 100% 成功通过】之后执行" -ForegroundColor Cyan
-Write-Host "   - 迁移统一命名 : $MigrationName" -ForegroundColor Cyan
+Write-Host "`n4. 数据库迁移说明 (共探测到 $($candidateMigrationProjects.Count) 个迁移工程):" -ForegroundColor Yellow
+Write-Host "   - 策略说明     : 脚本在编译通过后仅输出【人工执行命令清单】，不直接触碰数据库" -ForegroundColor Cyan
+Write-Host "   - 迁移推荐命名 : $MigrationName" -ForegroundColor Cyan
 if ($candidateMigrationProjects.Count -gt 0) {
     for ($i = 0; $i -lt $candidateMigrationProjects.Count; $i++) {
         $p = $candidateMigrationProjects[$i]
@@ -187,8 +187,8 @@ Write-Host "   [步骤 1] 写入或更新 global.json (.NET 10 SDK)" -Foreground
 Write-Host "   [步骤 2] 批量修改公共 props、所有 .csproj 及代码适配 (OpenApi 与 OpenIddict)" -ForegroundColor White
 Write-Host "   [步骤 3] 运行官方 CLI 命令: abp update -v $AbpVersion" -ForegroundColor White
 Write-Host "   [步骤 4] 执行 dotnet restore 依赖还原" -ForegroundColor White
-Write-Host "   [步骤 5] 执行 dotnet build 编译严格校验 (若失败直接中止，不执行迁移)" -ForegroundColor White
-Write-Host "   [步骤 6] 编译成功后，依次执行 $($candidateMigrationProjects.Count) 个项目的 EF Core 迁移与数据库更新" -ForegroundColor White
+Write-Host "   [步骤 5] 执行 dotnet build 编译严格校验 (必须 100% 成功)" -ForegroundColor White
+Write-Host "   [步骤 6] 生成并输出各个迁移工程的人工升级命令清单 (复制即可执行)" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Magenta
 
 # 用户最终确认
@@ -274,9 +274,12 @@ foreach ($cs in $allCsFiles) {
         $csText = $csText -replace 'OpenIddictConstants\.Permissions\.Endpoints\.Device(?!\w)', 'OpenIddictConstants.Permissions.Endpoints.DeviceAuthorization'
     }
 
-    # 清理非必须的 using IdentityModel;
-    if ($cs.Name -eq 'AbpCommonsHttpApiHostModule.cs' -and $csText -match 'using\s+IdentityModel;\r?\n') {
-        $csText = [System.Text.RegularExpressions.Regex]::Replace($csText, 'using\s+IdentityModel;\r?\n', '')
+    # 通用清理无用多余的 using IdentityModel;（若移除后该文件并未引用任何 IdentityModel 类型）
+    if ($csText -match 'using\s+IdentityModel;\r?\n?') {
+        $strippedText = [System.Text.RegularExpressions.Regex]::Replace($csText, 'using\s+IdentityModel;\r?\n?', '')
+        if ($strippedText -notmatch '\bIdentityModel\b') {
+            $csText = $strippedText
+        }
     }
 
     if ($csText -ne $origCs) {
@@ -387,67 +390,41 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "恭喜！整个解决方案所有项目在 .NET 10 下编译全部成功！" -ForegroundColor Green
 
 # -------------------------------------------------------------------------
-# [步骤 6] 编译成功后，执行 EF Core 数据库迁移 (默认名称: Abp10.6.1)
+# [步骤 6] 编译成功后，输出人工数据库迁移命令清单 (不直接运行)
 # -------------------------------------------------------------------------
-Write-Host "`n[步骤 6/6] 数据库迁移与更新 (迁移名称: $MigrationName)..." -ForegroundColor Cyan
+Write-Host "`n==========================================================" -ForegroundColor Magenta
+Write-Host "         >>> 人工数据库迁移执行命令清单 <<<               " -ForegroundColor Magenta
+Write-Host "==========================================================" -ForegroundColor Magenta
+Write-Host "代码及包升级已就绪，且 .NET 编译 100% 成功通过！" -ForegroundColor Green
+Write-Host "已按要求停止自动迁移，以下是各工程的人工执行命令清单：`n" -ForegroundColor Yellow
 
 if ($candidateMigrationProjects.Count -gt 0) {
-    Write-Host "探测到以下待迁移项目 (共 $($candidateMigrationProjects.Count) 个):" -ForegroundColor Yellow
     for ($i = 0; $i -lt $candidateMigrationProjects.Count; $i++) {
-        Write-Host "  [$($i + 1)] $($candidateMigrationProjects[$i].Name)" -ForegroundColor White
-    }
+        $targetProject = $candidateMigrationProjects[$i]
+        $relPath = Resolve-Path -Path $targetProject.DirectoryName -Relative
 
-    $migrationChoice = Read-Host "`n.NET 编译已通过，是否立即对以上 $($candidateMigrationProjects.Count) 个项目执行迁移与更新？[Y:全部执行 / S:逐个确认 / N:跳过]"
-    if ($migrationChoice -ne "n" -and $migrationChoice -ne "N") {
-        foreach ($targetProject in $candidateMigrationProjects) {
-            Write-Host "`n----------------------------------------------------------" -ForegroundColor DarkCyan
-            Write-Host "正在处理迁移项目: $($targetProject.Name)" -ForegroundColor Cyan
-            Write-Host "----------------------------------------------------------" -ForegroundColor DarkCyan
+        Write-Host "----------------------------------------------------------" -ForegroundColor DarkCyan
+        Write-Host " [工程 $($i + 1)] $($targetProject.Name)" -ForegroundColor Cyan
+        Write-Host " 目录: $relPath" -ForegroundColor Gray
+        Write-Host "----------------------------------------------------------" -ForegroundColor DarkCyan
 
-            if ($migrationChoice -eq "s" -or $migrationChoice -eq "S") {
-                $confirmSingle = Read-Host "是否执行 $($targetProject.Name) 的迁移？[Y/n]"
-                if ($confirmSingle -eq "n" -or $confirmSingle -eq "N") {
-                    Write-Host "跳过 $($targetProject.Name)" -ForegroundColor Gray
-                    continue
-                }
-            }
-
-            Set-Location $targetProject.DirectoryName
-
-            if ($targetProject.Name -match 'DbMigrator') {
-                Write-Host "[$($targetProject.Name)] 检测到为 DbMigrator 项目，正在启动迁移程序..." -ForegroundColor Yellow
-                dotnet run
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "[$($targetProject.Name)] DbMigrator 执行成功！" -ForegroundColor Green
-                } else {
-                    Write-Error "[$($targetProject.Name)] DbMigrator 执行失败，退出码: $LASTEXITCODE"
-                }
-            } else {
-                Write-Host "[$($targetProject.Name)] 执行: dotnet ef migrations add $MigrationName" -ForegroundColor Yellow
-                dotnet ef migrations add $MigrationName
-
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Host "[$($targetProject.Name)] 添加迁移失败，已中止对该项目的数据库更新！" -ForegroundColor Red
-                    continue
-                }
-
-                Write-Host "[$($targetProject.Name)] 执行: dotnet ef database update" -ForegroundColor Yellow
-                dotnet ef database update
-
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "[$($targetProject.Name)] 数据库迁移与更新成功！" -ForegroundColor Green
-                } else {
-                    Write-Host "[$($targetProject.Name)] 数据库更新失败，请排查连接字符串或 SQL 报错。" -ForegroundColor Red
-                }
-            }
+        if ($targetProject.Name -match 'DbMigrator') {
+            Write-Host "cd `"$relPath`"" -ForegroundColor White
+            Write-Host "dotnet run`n" -ForegroundColor White
+        } else {
+            Write-Host "cd `"$relPath`"" -ForegroundColor White
+            Write-Host "dotnet ef migrations add $MigrationName" -ForegroundColor White
+            Write-Host "dotnet ef database update`n" -ForegroundColor White
         }
-        Set-Location $ProjectsPath
-    } else {
-        Write-Host "已跳过数据库迁移。" -ForegroundColor Gray
     }
+
+    Write-Host "【提示】" -ForegroundColor DarkYellow
+    Write-Host "  1. 若执行迁移时提示版本工具警告，可先升级工具: dotnet tool update -g dotnet-ef" -ForegroundColor Gray
+    Write-Host "  2. 若需撤销刚生成的迁移，可在对应目录下执行: dotnet ef migrations remove" -ForegroundColor Gray
 } else {
-    Write-Host "未探测到含有 Migrations 的工程，跳过迁移。" -ForegroundColor Gray
+    Write-Host "未探测到含有 Migrations 的工程，无需执行数据库迁移。" -ForegroundColor Gray
 }
+Write-Host "==========================================================" -ForegroundColor Magenta
 
 # -------------------------------------------------------------------------
 # 完成
