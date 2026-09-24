@@ -1,0 +1,391 @@
+﻿<#
+.SYNOPSIS
+    ABP 多项目通用升级脚本（支持模块项目、应用项目、微服务项目）
+    目标：升级至 ABP 10.6.1 + .NET 10 (net10.0)
+.DESCRIPTION
+    此脚本专为各种类型的 ABP vNext 项目设计，运行时先列出详尽的升级计划清单，确认后再执行。
+    具备自适应路径识别、多工程文件扫描更新、global.json 维护、ABP CLI 同步、多项目 EF Core 数据库迁移支持等能力。
+.PARAMETER ProjectsPath
+    解决方案或项目根目录路径，默认自动探测（如果在 scripts 目录，则自动取上一级）。
+.PARAMETER AbpVersion
+    目标 ABP 版本号，默认 "10.6.1"
+.PARAMETER TargetFramework
+    目标 .NET 框架名称，默认 "net10.0"
+.PARAMETER DotNetVersion
+    目标 Microsoft 核心包版本号，默认 "10.0.0"
+.PARAMETER MigrationName
+    数据库迁移名称，默认 "Abp10.6.1"
+.PARAMETER SkipGitCheck
+    是否跳过未提交 Git 更改检查，默认 $false
+#>
+
+[CmdletBinding()]
+param (
+    [string]$ProjectsPath = "",
+    [string]$AbpVersion = "10.6.1",
+    [string]$TargetFramework = "net10.0",
+    [string]$DotNetVersion = "10.0.0",
+    [string]$MigrationName = "",
+    [switch]$SkipGitCheck = $false
+)
+
+$ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($MigrationName)) {
+    $MigrationName = "Abp$AbpVersion"
+}
+
+# -------------------------------------------------------------------------
+# 1. 智能解析解决方案根目录
+# -------------------------------------------------------------------------
+if ([string]::IsNullOrWhiteSpace($ProjectsPath)) {
+    if ((Split-Path $PSScriptRoot -Leaf) -ieq "scripts") {
+        $solutionRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+        $ProjectsPath = $solutionRoot.Path
+    } else {
+        $ProjectsPath = $PSScriptRoot
+    }
+} else {
+    $ProjectsPath = (Resolve-Path $ProjectsPath).Path
+}
+
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "          ABP 解决方案通用升级工具 (.NET 10)" -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "工作根目录: $ProjectsPath" -ForegroundColor Gray
+Write-Host "目标版本  : ABP $AbpVersion | .NET 10 ($TargetFramework) | MS $DotNetVersion" -ForegroundColor Gray
+Write-Host "迁移名称  : $MigrationName" -ForegroundColor Gray
+
+# -------------------------------------------------------------------------
+# 2. 检查 Git 状态
+# -------------------------------------------------------------------------
+if (-not $SkipGitCheck) {
+    Write-Host "`n[准备工作] 检查 Git 状态..." -ForegroundColor Cyan
+    Set-Location $ProjectsPath
+    $gitInstalled = Get-Command "git" -ErrorAction SilentlyContinue
+    if ($gitInstalled) {
+        $gitStatus = git status --porcelain 2>$null
+        if ($gitStatus) {
+            Write-Host "警告: 检测到工作区存在未提交的更改：" -ForegroundColor Yellow
+            Write-Host $gitStatus -ForegroundColor DarkYellow
+            $confirmGit = Read-Host "是否忽略未提交更改继续执行？(y/N)"
+            if ($confirmGit -ne "y" -and $confirmGit -ne "Y") {
+                Write-Host "用户已取消升级操作。" -ForegroundColor Red
+                exit 1
+            }
+        } else {
+            Write-Host "Git 检查通过：工作树干净。" -ForegroundColor Green
+        }
+    }
+}
+
+# -------------------------------------------------------------------------
+# 3. 扫描项目信息与收集升级计划
+# -------------------------------------------------------------------------
+Write-Host "`n[分析中] 正在扫描解决方案并生成升级计划清单..." -ForegroundColor Cyan
+
+# 探测业务版本号
+$detectedVersion = "0.1.0"
+$commonPropsPath = Join-Path $ProjectsPath "common.props"
+if (Test-Path $commonPropsPath) {
+    $propsContent = Get-Content $commonPropsPath -Raw
+    if ($propsContent -match '<Version>(.*?)</Version>') {
+        $detectedVersion = $matches[1]
+    }
+}
+
+$inputVersion = Read-Host "请输入新的模块自定义版本号 [直接回车默认: $detectedVersion]"
+if ([string]::IsNullOrWhiteSpace($inputVersion)) {
+    $newVersion = $detectedVersion
+} else {
+    $newVersion = $inputVersion
+}
+
+# 收集待更新的 csproj 与 props 文件
+$csprojFiles = Get-ChildItem -Path $ProjectsPath -Recurse -Filter *.csproj -File
+$propsFiles = Get-ChildItem -Path $ProjectsPath -Recurse -Include "common.props", "Directory.Build.props" -File
+
+# 统计分析每个项目的当前框架
+$planProjectList = @()
+$candidateMigrationProjects = @()
+
+foreach ($proj in $csprojFiles) {
+    $content = Get-Content $proj.FullName -Raw -Encoding utf8
+    $currentTf = "未知"
+    if ($content -match '<TargetFramework>(.*?)</TargetFramework>') {
+        $currentTf = $matches[1]
+    } elseif ($content -match '<TargetFrameworks>(.*?)</TargetFrameworks>') {
+        $currentTf = $matches[1]
+    }
+
+    $planProjectList += [PSCustomObject]@{
+        "项目名称"   = $proj.Name
+        "当前框架"   = $currentTf
+        "目标框架"   = $TargetFramework
+        "相对路径"   = (Resolve-Path -Path $proj.FullName -Relative)
+    }
+
+    # 判断是否为数据库迁移/启动候选工程 (含 Migrations 文件夹 或 包含 EF Core Tools 或 DbMigrator)
+    $hasTools = $content -match 'Microsoft\.EntityFrameworkCore\.Tools'
+    $hasMigrations = Test-Path (Join-Path $proj.DirectoryName "Migrations")
+    $isDbMigrator = $proj.Name -match 'DbMigrator'
+
+    if ($hasMigrations -or $isDbMigrator -or $hasTools) {
+        # 排除纯测试工程
+        if ($proj.Name -notmatch 'Tests') {
+            $candidateMigrationProjects += $proj
+        }
+    }
+}
+
+# -------------------------------------------------------------------------
+# 4. 展示升级计划清单（表格与摘要）
+# -------------------------------------------------------------------------
+Write-Host "`n==========================================================" -ForegroundColor Magenta
+Write-Host "                >>> 升级计划清单 (UPGRADE PLAN) <<<        " -ForegroundColor Magenta
+Write-Host "==========================================================" -ForegroundColor Magenta
+
+Write-Host "1. 全局配置变更计划:" -ForegroundColor Yellow
+Write-Host "   - global.json : 锁定/更新 SDK 为 10.0.100 (rollForward: latestFeature)" -ForegroundColor White
+Write-Host "   - 业务版本号  : $newVersion" -ForegroundColor White
+Write-Host "   - 核心框架    : $TargetFramework" -ForegroundColor White
+Write-Host "   - Volo.Abp.*  : 全部升级至 $AbpVersion" -ForegroundColor White
+Write-Host "   - EF/ASP.NET  : Microsoft.* 核心包升级至 $DotNetVersion" -ForegroundColor White
+
+Write-Host "`n2. 扫描到的待更新项目列表 (共 $($planProjectList.Count) 个工程):" -ForegroundColor Yellow
+$planProjectList | Format-Table -AutoSize | Out-String | Write-Host -ForegroundColor Gray
+
+if ($propsFiles.Count -gt 0) {
+    Write-Host "3. 待更新的公共属性文件 (共 $($propsFiles.Count) 个):" -ForegroundColor Yellow
+    foreach ($p in $propsFiles) {
+        Write-Host "   - $((Resolve-Path -Path $p.FullName -Relative))" -ForegroundColor Gray
+    }
+}
+
+Write-Host "`n4. 数据库迁移计划 (共探测到 $($candidateMigrationProjects.Count) 个迁移工程):" -ForegroundColor Yellow
+Write-Host "   - 迁移统一命名 : $MigrationName" -ForegroundColor Cyan
+if ($candidateMigrationProjects.Count -gt 0) {
+    for ($i = 0; $i -lt $candidateMigrationProjects.Count; $i++) {
+        $p = $candidateMigrationProjects[$i]
+        $rel = Resolve-Path -Path $p.FullName -Relative
+        Write-Host "   [$($i + 1)] $($p.Name) -> $rel" -ForegroundColor White
+    }
+} else {
+    Write-Host "   (未检测到含有 Migrations 目录的工程)" -ForegroundColor Gray
+}
+
+Write-Host "`n5. 计划执行的升级流水线:" -ForegroundColor Yellow
+Write-Host "   [步骤 1] 写入或更新 global.json (.NET 10 SDK)" -ForegroundColor White
+Write-Host "   [步骤 2] 批量修改公共 props 及所有 .csproj (框架与包版本升级)" -ForegroundColor White
+Write-Host "   [步骤 3] 运行官方 CLI 命令: abp update -v $AbpVersion" -ForegroundColor White
+Write-Host "   [步骤 4] 执行 dotnet restore 依赖还原" -ForegroundColor White
+Write-Host "   [步骤 5] 执行 dotnet build 编译验证" -ForegroundColor White
+Write-Host "   [步骤 6] 依次执行上述 $($candidateMigrationProjects.Count) 个项目的 EF Core 迁移与数据库更新" -ForegroundColor White
+Write-Host "==========================================================" -ForegroundColor Magenta
+
+# 用户最终确认
+$confirmPlan = Read-Host "`n是否确认上述升级计划并开始执行？[Y/n]"
+if ($confirmPlan -eq "n" -or $confirmPlan -eq "N") {
+    Write-Host "已取消升级计划，未修改任何文件。" -ForegroundColor Yellow
+    exit 0
+}
+
+Write-Host "`n开始执行升级计划..." -ForegroundColor Green
+
+# -------------------------------------------------------------------------
+# [步骤 1] 配置 global.json 确保使用 .NET 10 SDK
+# -------------------------------------------------------------------------
+Write-Host "`n[步骤 1/6] 配置 global.json..." -ForegroundColor Cyan
+$globalJsonPath = Join-Path $ProjectsPath "global.json"
+$globalJsonContent = @"
+{
+  "sdk": {
+    "version": "10.0.100",
+    "rollForward": "latestFeature",
+    "allowPrerelease": true
+  }
+}
+"@
+
+if (-not (Test-Path $globalJsonPath)) {
+    $globalJsonContent | Out-File -FilePath $globalJsonPath -Encoding utf8 -Force
+    Write-Host "已创建 global.json (锁定 .NET 10 SDK)" -ForegroundColor Green
+} else {
+    try {
+        $jsonObj = Get-Content $globalJsonPath -Raw | ConvertFrom-Json
+        if (-not $jsonObj.sdk) {
+            $jsonObj | Add-Member -MemberType NoteProperty -Name "sdk" -Value ([PSCustomObject]@{})
+        }
+        $jsonObj.sdk.version = "10.0.100"
+        $jsonObj.sdk.rollForward = "latestFeature"
+        $jsonObj | ConvertTo-Json -Depth 5 | Out-File -FilePath $globalJsonPath -Encoding utf8 -Force
+        Write-Host "已更新现有 global.json -> .NET 10" -ForegroundColor Green
+    } catch {
+        $globalJsonContent | Out-File -FilePath $globalJsonPath -Encoding utf8 -Force
+        Write-Host "已重新写入 global.json" -ForegroundColor Green
+    }
+}
+
+# -------------------------------------------------------------------------
+# [步骤 2] 更新 common.props 与所有 .csproj
+# -------------------------------------------------------------------------
+Write-Host "`n[步骤 2/6] 更新公共 props 及所有 .csproj 项目文件..." -ForegroundColor Cyan
+
+foreach ($propFile in $propsFiles) {
+    $content = Get-Content $propFile.FullName -Raw -Encoding utf8
+    $origContent = $content
+    if ($content -match '<Version>') {
+        $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<Version>.*?</Version>', "<Version>$newVersion</Version>")
+    }
+    if ($content -match '<TargetFramework>') {
+        $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<TargetFramework>.*?</TargetFramework>', "<TargetFramework>$TargetFramework</TargetFramework>")
+    }
+    if ($content -ne $origContent) {
+        [System.IO.File]::WriteAllText($propFile.FullName, $content, [System.Text.Encoding]::UTF8)
+        Write-Host "  已更新属性文件: $($propFile.Name)" -ForegroundColor Green
+    }
+}
+
+foreach ($proj in $csprojFiles) {
+    $file = $proj.FullName
+    $content = Get-Content $file -Raw -Encoding utf8
+    $origContent = $content
+
+    $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<TargetFramework>.*?</TargetFramework>', "<TargetFramework>$TargetFramework</TargetFramework>")
+    $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<TargetFrameworks>.*?</TargetFrameworks>', "<TargetFrameworks>$TargetFramework</TargetFrameworks>")
+
+    if ($content -match '<Version>') {
+        $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<Version>.*?</Version>', "<Version>$newVersion</Version>")
+    }
+
+    $content = [System.Text.RegularExpressions.Regex]::Replace(
+        $content,
+        '(<PackageReference\s+Include="Volo\.Abp[^"]*"\s+Version=")[^"]*(")',
+        "`${1}$AbpVersion`${2}"
+    )
+
+    $content = [System.Text.RegularExpressions.Regex]::Replace(
+        $content,
+        '(<PackageReference\s+Include="Microsoft\.EntityFrameworkCore[^"]*"\s+Version=")[^"]*(")',
+        "`${1}$DotNetVersion`${2}"
+    )
+
+    $content = [System.Text.RegularExpressions.Regex]::Replace(
+        $content,
+        '(<PackageReference\s+Include="Microsoft\.AspNetCore[^"]*"\s+Version=")[^"]*(")',
+        "`${1}$DotNetVersion`${2}"
+    )
+
+    $content = [System.Text.RegularExpressions.Regex]::Replace(
+        $content,
+        '(<PackageReference\s+Include="Microsoft\.Extensions[^"]*"\s+Version=")[^"]*(")',
+        "`${1}$DotNetVersion`${2}"
+    )
+
+    if ($content -ne $origContent) {
+        [System.IO.File]::WriteAllText($file, $content, [System.Text.Encoding]::UTF8)
+        Write-Host "  已更新项目: $($proj.Name)" -ForegroundColor Green
+    }
+}
+
+# -------------------------------------------------------------------------
+# [步骤 3] 执行官方 ABP CLI 同步更新
+# -------------------------------------------------------------------------
+Write-Host "`n[步骤 3/6] 执行 ABP CLI 同步依赖 (abp update -v $AbpVersion)..." -ForegroundColor Cyan
+Set-Location $ProjectsPath
+
+$abpCmd = Get-Command "abp" -ErrorAction SilentlyContinue
+if ($abpCmd) {
+    try {
+        Write-Host "正在调用 abp update..." -ForegroundColor Yellow
+        abp update -v $AbpVersion
+        Write-Host "ABP CLI 更新完成。" -ForegroundColor Green
+    } catch {
+        Write-Warning "调用 abp update 提示: $_"
+    }
+} else {
+    Write-Host "系统环境中未发现 abp 命令，项目包引用已通过脚本完成升级。" -ForegroundColor DarkYellow
+}
+
+# -------------------------------------------------------------------------
+# [步骤 4] 依赖还原
+# -------------------------------------------------------------------------
+Write-Host "`n[步骤 4/6] 还原项目依赖 (dotnet restore)..." -ForegroundColor Cyan
+Set-Location $ProjectsPath
+dotnet restore
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "dotnet restore 失败，请检查 NuGet 配置。"
+    exit 1
+}
+Write-Host "依赖还原成功。" -ForegroundColor Green
+
+# -------------------------------------------------------------------------
+# [步骤 5] 编译验证
+# -------------------------------------------------------------------------
+Write-Host "`n[步骤 5/6] 编译项目 (dotnet build)..." -ForegroundColor Cyan
+$confirmBuild = Read-Host "是否立即执行项目编译构建验证？[Y/n]"
+if ($confirmBuild -ne "n" -and $confirmBuild -ne "N") {
+    dotnet build --configuration Release --no-incremental
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "项目编译通过！" -ForegroundColor Green
+    } else {
+        Write-Warning "项目编译存在错误，请排查上方输出详情。"
+    }
+}
+
+# -------------------------------------------------------------------------
+# [步骤 6] 针对所有探测到的项目执行 EF Core 数据库迁移 (默认名称: Abp10.6.1)
+# -------------------------------------------------------------------------
+Write-Host "`n[步骤 6/6] 数据库迁移与更新 (迁移名称: $MigrationName)..." -ForegroundColor Cyan
+
+if ($candidateMigrationProjects.Count -gt 0) {
+    Write-Host "探测到以下待迁移项目 (共 $($candidateMigrationProjects.Count) 个):" -ForegroundColor Yellow
+    for ($i = 0; $i -lt $candidateMigrationProjects.Count; $i++) {
+        Write-Host "  [$($i + 1)] $($candidateMigrationProjects[$i].Name)" -ForegroundColor White
+    }
+
+    $migrationChoice = Read-Host "`n是否立即对以上 $($candidateMigrationProjects.Count) 个项目执行迁移与更新？[Y:全部执行 / S:逐个确认 / N:跳过]"
+    if ($migrationChoice -ne "n" -and $migrationChoice -ne "N") {
+        foreach ($targetProject in $candidateMigrationProjects) {
+            Write-Host "`n----------------------------------------------------------" -ForegroundColor DarkCyan
+            Write-Host "正在处理迁移项目: $($targetProject.Name)" -ForegroundColor Cyan
+            Write-Host "----------------------------------------------------------" -ForegroundColor DarkCyan
+
+            if ($migrationChoice -eq "s" -or $migrationChoice -eq "S") {
+                $confirmSingle = Read-Host "是否执行 $($targetProject.Name) 的迁移？[Y/n]"
+                if ($confirmSingle -eq "n" -or $confirmSingle -eq "N") {
+                    Write-Host "跳过 $($targetProject.Name)" -ForegroundColor Gray
+                    continue
+                }
+            }
+
+            Set-Location $targetProject.DirectoryName
+
+            if ($targetProject.Name -match 'DbMigrator') {
+                Write-Host "[$($targetProject.Name)] 检测到为 DbMigrator 项目，正在启动迁移程序..." -ForegroundColor Yellow
+                dotnet run
+            } else {
+                Write-Host "[$($targetProject.Name)] 执行: dotnet ef migrations add $MigrationName" -ForegroundColor Yellow
+                dotnet ef migrations add $MigrationName
+
+                Write-Host "[$($targetProject.Name)] 执行: dotnet ef database update" -ForegroundColor Yellow
+                dotnet ef database update
+                Write-Host "[$($targetProject.Name)] 迁移与更新已完成！" -ForegroundColor Green
+            }
+        }
+        Set-Location $ProjectsPath
+    } else {
+        Write-Host "已跳过数据库迁移。" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "未探测到含有 Migrations 的工程，跳过迁移。" -ForegroundColor Gray
+}
+
+# -------------------------------------------------------------------------
+# 完成
+# -------------------------------------------------------------------------
+Set-Location $ProjectsPath
+Write-Host "`n==========================================================" -ForegroundColor Green
+Write-Host " 升级流程全部完成！已成功升级至 ABP $AbpVersion + .NET 10" -ForegroundColor Green
+Write-Host "==========================================================" -ForegroundColor Green
