@@ -11,5 +11,9 @@
     "Default": {
       "path": "etc/abp-studio/run-profiles/Default.abprun.json"
     }
+  },
+  "versions": {
+    "AbpFramework": "10.6.1",
+    "AbpCommercial": "10.6.1"
   }
 }

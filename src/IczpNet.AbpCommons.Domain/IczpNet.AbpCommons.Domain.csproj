@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <Import Project="..\..\common.props" />
 
@@ -32,10 +32,10 @@
     <PackageReference Include="PinYinConverterCore" Version="1.0.2" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.4" />
     <!--<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />-->
-		<PackageReference Include="Volo.Abp.AspNetCore" Version="9.0.0" />
-    <PackageReference Include="Volo.Abp.AutoMapper" Version="9.0.0" />
-    <PackageReference Include="Volo.Abp.Ddd.Domain" Version="9.0.0" />
-		<PackageReference Include="Volo.Abp.Imaging.ImageSharp" Version="9.0.0" />
+		<PackageReference Include="Volo.Abp.AspNetCore" Version="10.6.1" />
+    <PackageReference Include="Volo.Abp.AutoMapper" Version="10.6.1" />
+    <PackageReference Include="Volo.Abp.Ddd.Domain" Version="10.6.1" />
+		<PackageReference Include="Volo.Abp.Imaging.ImageSharp" Version="10.6.1" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Domain.Shared\IczpNet.AbpCommons.Domain.Shared.csproj" />
   </ItemGroup>
 

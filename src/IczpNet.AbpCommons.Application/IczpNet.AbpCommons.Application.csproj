@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <Import Project="..\..\common.props" />
 
@@ -29,8 +29,8 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Volo.Abp.AutoMapper" Version="9.0.0" />
-    <PackageReference Include="Volo.Abp.Ddd.Application" Version="9.0.0" />
+    <PackageReference Include="Volo.Abp.AutoMapper" Version="10.6.1" />
+    <PackageReference Include="Volo.Abp.Ddd.Application" Version="10.6.1" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Application.Contracts\IczpNet.AbpCommons.Application.Contracts.csproj" />
     <ProjectReference Include="..\IczpNet.AbpCommons.Domain\IczpNet.AbpCommons.Domain.csproj" />
   </ItemGroup>
