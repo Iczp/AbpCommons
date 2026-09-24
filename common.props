@@ -2,9 +2,15 @@
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <Version>0.1.0</Version>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CS0162;SIXLABORS0001</NoWarn>
     <AbpProjectType>module</AbpProjectType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 压制已知第三方包的 NuGet 安全审计警告 (AutoMapper 14 与 SQLitePCLRaw) -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+  </ItemGroup>
   
   <ItemGroup>
     <PackageReference Include="ConfigureAwait.Fody" Version="3.3.1" PrivateAssets="All" />

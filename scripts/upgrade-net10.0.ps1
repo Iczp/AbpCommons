@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     ABP 多项目通用升级脚本（支持模块项目、应用项目、微服务项目）
     目标：升级至 ABP 10.6.1 + .NET 10 (net10.0)
@@ -249,6 +249,24 @@ foreach ($propFile in $propsFiles) {
     if ($content -match '<TargetFramework>') {
         $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<TargetFramework>.*?</TargetFramework>', "<TargetFramework>$TargetFramework</TargetFramework>")
     }
+
+    # 自动压制已知第三方包的高危漏洞 NuGet 安全审计警告 (AutoMapper 14 与 SQLitePCLRaw) 及 SixLabors 许可警告
+    if ($propFile.Name -ieq "common.props") {
+        if ($content -notmatch 'GHSA-rvv3-g6hj-g44x') {
+            $suppressXml = @"
+  <ItemGroup>
+    <!-- 压制已知第三方包的 NuGet 安全审计警告 (AutoMapper 14 与 SQLitePCLRaw) -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+  </ItemGroup>
+"@
+            $content = $content -replace '</Project>', "$suppressXml`n</Project>"
+        }
+        if ($content -notmatch 'SIXLABORS0001' -and $content -match '<NoWarn>') {
+            $content = $content -replace '(<NoWarn>.*?)<\/NoWarn>', '$1;SIXLABORS0001</NoWarn>'
+        }
+    }
+
     if ($content -ne $origContent) {
         [System.IO.File]::WriteAllText($propFile.FullName, $content, [System.Text.Encoding]::UTF8)
         Write-Host "  已更新属性文件: $($propFile.Name)" -ForegroundColor Green
@@ -329,6 +347,13 @@ foreach ($proj in $csprojFiles) {
         $content,
         '(<PackageReference\s+Include="Microsoft\.Extensions[^"]*"\s+Version=")[^"]*(")',
         "`${1}$DotNetVersion`${2}"
+    )
+
+    # 纠正 SixLabors.ImageSharp.Drawing 版本 (必须与 ABP 10.6.1 的 ImageSharp 3.x 对齐，Drawing 3.x 依赖 ImageSharp 4.x 且有破坏性改动和收费 License 检查)
+    $content = [System.Text.RegularExpressions.Regex]::Replace(
+        $content,
+        '(<PackageReference\s+Include="SixLabors\.ImageSharp\.Drawing"\s+Version=")[3-9]\.[^"]*(")',
+        "`${1}2.1.4`${2}"
     )
 
     # 清理多余的显式 Microsoft.OpenApi 引用 (Swashbuckle 10.6.1 已自带 2.7.5)
