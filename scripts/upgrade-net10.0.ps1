@@ -6,10 +6,11 @@
     此脚本专为各种类型的 ABP vNext 项目设计，具备：
     1. 运行时先展示详尽的升级计划清单，确认后再执行。
     2. 自适应路径识别，批量更新 .csproj（net10.0）、props、global.json。
-    3. 自动探测并补齐 .NET 10 / ABP 10 破坏性依赖（如 IdentityModel、Microsoft.OpenApi）。
-    4. 执行 ABP CLI 同步更新 (abp update -v 10.6.1)。
-    5. 严格的编译校验拦截：仅在项目编译 100% 通过后，才进入数据库迁移阶段！
-    6. 多项目 EF Core 数据库迁移支持 (统一名称如 Abp10.6.1)。
+    3. 自动适配代码中的 Microsoft.OpenApi 2.x 命名空间变动（using Microsoft.OpenApi.Models -> using Microsoft.OpenApi）。
+    4. 幂等检测并处理必要依赖（如 IdentityModel），绝不产生重复项。
+    5. 执行 ABP CLI 同步更新 (abp update -v 10.6.1)。
+    6. 严格的编译校验拦截：仅在项目编译 100% 成功通过后，才进入数据库迁移阶段！
+    7. 多项目 EF Core 数据库迁移支持 (统一名称如 Abp10.6.1)。
 .PARAMETER ProjectsPath
     解决方案或项目根目录路径，默认自动探测（如果在 scripts 目录，则自动取上一级）。
 .PARAMETER AbpVersion
@@ -130,7 +131,7 @@ foreach ($proj in $csprojFiles) {
         "相对路径"   = (Resolve-Path -Path $proj.FullName -Relative)
     }
 
-    # 判断是否为数据库迁移/启动候选工程 (含 Migrations 文件夹 或 包含 EF Core Tools 或 DbMigrator)
+    # 判断是否为数据库迁移/启动候选工程
     $hasTools = $content -match 'Microsoft\.EntityFrameworkCore\.Tools'
     $hasMigrations = Test-Path (Join-Path $proj.DirectoryName "Migrations")
     $isDbMigrator = $proj.Name -match 'DbMigrator'
@@ -155,7 +156,7 @@ Write-Host "   - 业务版本号  : $newVersion" -ForegroundColor White
 Write-Host "   - 核心框架    : $TargetFramework" -ForegroundColor White
 Write-Host "   - Volo.Abp.*  : 全部升级至 $AbpVersion" -ForegroundColor White
 Write-Host "   - EF/ASP.NET  : Microsoft.* 核心包升级至 $DotNetVersion" -ForegroundColor White
-Write-Host "   - 破坏性兼容  : 自动检测补齐 IdentityModel 与 Microsoft.OpenApi" -ForegroundColor White
+Write-Host "   - 代码兼容调整: 自动适配 Microsoft.OpenApi 2.x 命名空间 (using Microsoft.OpenApi.Models -> using Microsoft.OpenApi)" -ForegroundColor White
 
 Write-Host "`n2. 扫描到的待更新项目列表 (共 $($planProjectList.Count) 个工程):" -ForegroundColor Yellow
 $planProjectList | Format-Table -AutoSize | Out-String | Write-Host -ForegroundColor Gray
@@ -168,7 +169,7 @@ if ($propsFiles.Count -gt 0) {
 }
 
 Write-Host "`n4. 数据库迁移计划 (共探测到 $($candidateMigrationProjects.Count) 个迁移工程):" -ForegroundColor Yellow
-Write-Host "   - 迁移执行条件 : 必须在【.NET 编译 100% 成功通过】之后执行" -ForegroundColor Cyan
+Write-Host "   - 迁移执行前置 : 必须在【.NET 编译 100% 成功通过】之后执行" -ForegroundColor Cyan
 Write-Host "   - 迁移统一命名 : $MigrationName" -ForegroundColor Cyan
 if ($candidateMigrationProjects.Count -gt 0) {
     for ($i = 0; $i -lt $candidateMigrationProjects.Count; $i++) {
@@ -182,10 +183,10 @@ if ($candidateMigrationProjects.Count -gt 0) {
 
 Write-Host "`n5. 计划执行的升级流水线:" -ForegroundColor Yellow
 Write-Host "   [步骤 1] 写入或更新 global.json (.NET 10 SDK)" -ForegroundColor White
-Write-Host "   [步骤 2] 批量修改公共 props 及所有 .csproj (框架升级、包升级、依赖缺失自修复)" -ForegroundColor White
+Write-Host "   [步骤 2] 批量修改公共 props、所有 .csproj 及代码适配 (OpenApi 2.x 命名空间)" -ForegroundColor White
 Write-Host "   [步骤 3] 运行官方 CLI 命令: abp update -v $AbpVersion" -ForegroundColor White
 Write-Host "   [步骤 4] 执行 dotnet restore 依赖还原" -ForegroundColor White
-Write-Host "   [步骤 5] 执行 dotnet build 编译严格校验 (若失败直接终止，不进入迁移)" -ForegroundColor White
+Write-Host "   [步骤 5] 执行 dotnet build 编译严格校验 (若失败直接中止，不执行迁移)" -ForegroundColor White
 Write-Host "   [步骤 6] 编译成功后，依次执行 $($candidateMigrationProjects.Count) 个项目的 EF Core 迁移与数据库更新" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Magenta
 
@@ -233,10 +234,11 @@ if (-not (Test-Path $globalJsonPath)) {
 }
 
 # -------------------------------------------------------------------------
-# [步骤 2] 更新 common.props 与所有 .csproj，并自愈缺失依赖
+# [步骤 2] 更新 props、.csproj 并自动适配 OpenApi 2.x 命名空间
 # -------------------------------------------------------------------------
-Write-Host "`n[步骤 2/6] 更新公共 props 及所有 .csproj 项目文件..." -ForegroundColor Cyan
+Write-Host "`n[步骤 2/6] 更新公共 props、.csproj 项目文件及代码适配..." -ForegroundColor Cyan
 
+# 2.1 更新公共属性文件
 foreach ($propFile in $propsFiles) {
     $content = Get-Content $propFile.FullName -Raw -Encoding utf8
     $origContent = $content
@@ -252,6 +254,18 @@ foreach ($propFile in $propsFiles) {
     }
 }
 
+# 2.2 自动适配代码中的 Microsoft.OpenApi 2.x 变更 (Microsoft.OpenApi.Models -> Microsoft.OpenApi)
+$allCsFiles = Get-ChildItem -Path $ProjectsPath -Recurse -Filter *.cs -File -ErrorAction SilentlyContinue
+foreach ($cs in $allCsFiles) {
+    $csText = Get-Content $cs.FullName -Raw -Encoding utf8 -ErrorAction SilentlyContinue
+    if ($csText -match 'using\s+Microsoft\.OpenApi\.Models;') {
+        $csText = $csText -replace 'using\s+Microsoft\.OpenApi\.Models;', 'using Microsoft.OpenApi;'
+        [System.IO.File]::WriteAllText($cs.FullName, $csText, [System.Text.Encoding]::UTF8)
+        Write-Host "  已适配 OpenApi 2.x 命名空间: $($cs.Name)" -ForegroundColor Green
+    }
+}
+
+# 2.3 更新所有 .csproj 文件
 foreach ($proj in $csprojFiles) {
     $file = $proj.FullName
     $content = Get-Content $file -Raw -Encoding utf8
@@ -294,35 +308,24 @@ foreach ($proj in $csprojFiles) {
         "`${1}$DotNetVersion`${2}"
     )
 
-    # ---------------- 自动探测代码并补齐缺失包 (IdentityModel 与 Microsoft.OpenApi) ----------------
-    $csFiles = Get-ChildItem -Path $proj.DirectoryName -Filter *.cs -Recurse -File -ErrorAction SilentlyContinue
-    $needsIdentityModel = $false
-    $needsOpenApi = $false
+    # 清理多余/错误的显式 Microsoft.OpenApi 引用 (Swashbuckle 10.6.1 已自带 2.7.5)
+    $content = [System.Text.RegularExpressions.Regex]::Replace($content, '\s*<PackageReference\s+Include="Microsoft\.OpenApi"[^>]*/>', '')
 
-    foreach ($cs in $csFiles) {
-        $csText = Get-Content $cs.FullName -Raw -ErrorAction SilentlyContinue
-        if ($csText -match 'using\s+IdentityModel') {
-            $needsIdentityModel = $true
-        }
-        if ($csText -match 'using\s+Microsoft\.OpenApi' -or $csText -match 'SwaggerDoc\(' -or $csText -match 'OpenApiInfo') {
-            $needsOpenApi = $true
-        }
+    # 幂等处理 IdentityModel 依赖：若代码中使用了 IdentityModel 但项目未生效引入
+    $projCsFiles = Get-ChildItem -Path $proj.DirectoryName -Filter *.cs -Recurse -File -ErrorAction SilentlyContinue
+    $hasIdentityModelUsage = $false
+    foreach ($cs in $projCsFiles) {
+        $t = Get-Content $cs.FullName -Raw -ErrorAction SilentlyContinue
+        if ($t -match 'using\s+IdentityModel') { $hasIdentityModelUsage = $true; break }
     }
 
-    # 补齐 IdentityModel
-    if ($needsIdentityModel) {
+    if ($hasIdentityModelUsage) {
         if ($content -match '<!--\s*<PackageReference Include="IdentityModel"[^>]*-->') {
-            # 解除被注释的 IdentityModel
+            # 解开原本被注释的项
             $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<!--\s*<PackageReference Include="IdentityModel"[^>]*-->', '<PackageReference Include="IdentityModel" Version="7.0.0" />')
-        } elseif ($content -notmatch 'PackageReference\s+Include="IdentityModel"') {
+        } elseif ($content -notmatch '<PackageReference\s+Include="IdentityModel"') {
+            # 仅在完全没有引用时插入一次
             $content = [System.Text.RegularExpressions.Regex]::Replace($content, '</ItemGroup>', "    <PackageReference Include=`"IdentityModel`" Version=`"7.0.0`" />`r`n  </ItemGroup>", [System.Text.RegularExpressions.RegexOptions]::None)
-        }
-    }
-
-    # 补齐 Microsoft.OpenApi
-    if ($needsOpenApi) {
-        if ($content -notmatch 'PackageReference\s+Include="Microsoft\.OpenApi"') {
-            $content = [System.Text.RegularExpressions.Regex]::Replace($content, '</ItemGroup>', "    <PackageReference Include=`"Microsoft.OpenApi`" Version=`"1.6.23`" />`r`n  </ItemGroup>", [System.Text.RegularExpressions.RegexOptions]::None)
         }
     }
 
