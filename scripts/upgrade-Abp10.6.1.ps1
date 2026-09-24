@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     ABP 多项目通用升级脚本（支持模块项目、应用项目、微服务项目）
     目标：升级至 ABP 10.6.1 + .NET 10 (net10.0)
@@ -31,7 +31,7 @@ param (
     [string]$ProjectsPath = "",
     [string]$AbpVersion = "10.6.1",
     [string]$TargetFramework = "net10.0",
-    [string]$DotNetVersion = "10.0.0",
+    [string]$DotNetVersion = "10.0.9",
     [string]$MigrationName = "",
     [switch]$SkipGitCheck = $false
 )
