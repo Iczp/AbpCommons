@@ -3,8 +3,13 @@
     ABP 多项目通用升级脚本（支持模块项目、应用项目、微服务项目）
     目标：升级至 ABP 10.6.1 + .NET 10 (net10.0)
 .DESCRIPTION
-    此脚本专为各种类型的 ABP vNext 项目设计，运行时先列出详尽的升级计划清单，确认后再执行。
-    具备自适应路径识别、多工程文件扫描更新、global.json 维护、ABP CLI 同步、多项目 EF Core 数据库迁移支持等能力。
+    此脚本专为各种类型的 ABP vNext 项目设计，具备：
+    1. 运行时先展示详尽的升级计划清单，确认后再执行。
+    2. 自适应路径识别，批量更新 .csproj（net10.0）、props、global.json。
+    3. 自动探测并补齐 .NET 10 / ABP 10 破坏性依赖（如 IdentityModel、Microsoft.OpenApi）。
+    4. 执行 ABP CLI 同步更新 (abp update -v 10.6.1)。
+    5. 严格的编译校验拦截：仅在项目编译 100% 通过后，才进入数据库迁移阶段！
+    6. 多项目 EF Core 数据库迁移支持 (统一名称如 Abp10.6.1)。
 .PARAMETER ProjectsPath
     解决方案或项目根目录路径，默认自动探测（如果在 scripts 目录，则自动取上一级）。
 .PARAMETER AbpVersion
@@ -131,7 +136,6 @@ foreach ($proj in $csprojFiles) {
     $isDbMigrator = $proj.Name -match 'DbMigrator'
 
     if ($hasMigrations -or $isDbMigrator -or $hasTools) {
-        # 排除纯测试工程
         if ($proj.Name -notmatch 'Tests') {
             $candidateMigrationProjects += $proj
         }
@@ -151,6 +155,7 @@ Write-Host "   - 业务版本号  : $newVersion" -ForegroundColor White
 Write-Host "   - 核心框架    : $TargetFramework" -ForegroundColor White
 Write-Host "   - Volo.Abp.*  : 全部升级至 $AbpVersion" -ForegroundColor White
 Write-Host "   - EF/ASP.NET  : Microsoft.* 核心包升级至 $DotNetVersion" -ForegroundColor White
+Write-Host "   - 破坏性兼容  : 自动检测补齐 IdentityModel 与 Microsoft.OpenApi" -ForegroundColor White
 
 Write-Host "`n2. 扫描到的待更新项目列表 (共 $($planProjectList.Count) 个工程):" -ForegroundColor Yellow
 $planProjectList | Format-Table -AutoSize | Out-String | Write-Host -ForegroundColor Gray
@@ -163,6 +168,7 @@ if ($propsFiles.Count -gt 0) {
 }
 
 Write-Host "`n4. 数据库迁移计划 (共探测到 $($candidateMigrationProjects.Count) 个迁移工程):" -ForegroundColor Yellow
+Write-Host "   - 迁移执行条件 : 必须在【.NET 编译 100% 成功通过】之后执行" -ForegroundColor Cyan
 Write-Host "   - 迁移统一命名 : $MigrationName" -ForegroundColor Cyan
 if ($candidateMigrationProjects.Count -gt 0) {
     for ($i = 0; $i -lt $candidateMigrationProjects.Count; $i++) {
@@ -176,11 +182,11 @@ if ($candidateMigrationProjects.Count -gt 0) {
 
 Write-Host "`n5. 计划执行的升级流水线:" -ForegroundColor Yellow
 Write-Host "   [步骤 1] 写入或更新 global.json (.NET 10 SDK)" -ForegroundColor White
-Write-Host "   [步骤 2] 批量修改公共 props 及所有 .csproj (框架与包版本升级)" -ForegroundColor White
+Write-Host "   [步骤 2] 批量修改公共 props 及所有 .csproj (框架升级、包升级、依赖缺失自修复)" -ForegroundColor White
 Write-Host "   [步骤 3] 运行官方 CLI 命令: abp update -v $AbpVersion" -ForegroundColor White
 Write-Host "   [步骤 4] 执行 dotnet restore 依赖还原" -ForegroundColor White
-Write-Host "   [步骤 5] 执行 dotnet build 编译验证" -ForegroundColor White
-Write-Host "   [步骤 6] 依次执行上述 $($candidateMigrationProjects.Count) 个项目的 EF Core 迁移与数据库更新" -ForegroundColor White
+Write-Host "   [步骤 5] 执行 dotnet build 编译严格校验 (若失败直接终止，不进入迁移)" -ForegroundColor White
+Write-Host "   [步骤 6] 编译成功后，依次执行 $($candidateMigrationProjects.Count) 个项目的 EF Core 迁移与数据库更新" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Magenta
 
 # 用户最终确认
@@ -227,7 +233,7 @@ if (-not (Test-Path $globalJsonPath)) {
 }
 
 # -------------------------------------------------------------------------
-# [步骤 2] 更新 common.props 与所有 .csproj
+# [步骤 2] 更新 common.props 与所有 .csproj，并自愈缺失依赖
 # -------------------------------------------------------------------------
 Write-Host "`n[步骤 2/6] 更新公共 props 及所有 .csproj 项目文件..." -ForegroundColor Cyan
 
@@ -251,36 +257,74 @@ foreach ($proj in $csprojFiles) {
     $content = Get-Content $file -Raw -Encoding utf8
     $origContent = $content
 
+    # 替换 TargetFramework / TargetFrameworks
     $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<TargetFramework>.*?</TargetFramework>', "<TargetFramework>$TargetFramework</TargetFramework>")
     $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<TargetFrameworks>.*?</TargetFrameworks>', "<TargetFrameworks>$TargetFramework</TargetFrameworks>")
 
+    # 替换 Version
     if ($content -match '<Version>') {
         $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<Version>.*?</Version>', "<Version>$newVersion</Version>")
     }
 
+    # 替换 Volo.Abp.*
     $content = [System.Text.RegularExpressions.Regex]::Replace(
         $content,
         '(<PackageReference\s+Include="Volo\.Abp[^"]*"\s+Version=")[^"]*(")',
         "`${1}$AbpVersion`${2}"
     )
 
+    # 替换 Microsoft.EntityFrameworkCore.*
     $content = [System.Text.RegularExpressions.Regex]::Replace(
         $content,
         '(<PackageReference\s+Include="Microsoft\.EntityFrameworkCore[^"]*"\s+Version=")[^"]*(")',
         "`${1}$DotNetVersion`${2}"
     )
 
+    # 替换 Microsoft.AspNetCore.*
     $content = [System.Text.RegularExpressions.Regex]::Replace(
         $content,
         '(<PackageReference\s+Include="Microsoft\.AspNetCore[^"]*"\s+Version=")[^"]*(")',
         "`${1}$DotNetVersion`${2}"
     )
 
+    # 替换 Microsoft.Extensions.*
     $content = [System.Text.RegularExpressions.Regex]::Replace(
         $content,
         '(<PackageReference\s+Include="Microsoft\.Extensions[^"]*"\s+Version=")[^"]*(")',
         "`${1}$DotNetVersion`${2}"
     )
+
+    # ---------------- 自动探测代码并补齐缺失包 (IdentityModel 与 Microsoft.OpenApi) ----------------
+    $csFiles = Get-ChildItem -Path $proj.DirectoryName -Filter *.cs -Recurse -File -ErrorAction SilentlyContinue
+    $needsIdentityModel = $false
+    $needsOpenApi = $false
+
+    foreach ($cs in $csFiles) {
+        $csText = Get-Content $cs.FullName -Raw -ErrorAction SilentlyContinue
+        if ($csText -match 'using\s+IdentityModel') {
+            $needsIdentityModel = $true
+        }
+        if ($csText -match 'using\s+Microsoft\.OpenApi' -or $csText -match 'SwaggerDoc\(' -or $csText -match 'OpenApiInfo') {
+            $needsOpenApi = $true
+        }
+    }
+
+    # 补齐 IdentityModel
+    if ($needsIdentityModel) {
+        if ($content -match '<!--\s*<PackageReference Include="IdentityModel"[^>]*-->') {
+            # 解除被注释的 IdentityModel
+            $content = [System.Text.RegularExpressions.Regex]::Replace($content, '<!--\s*<PackageReference Include="IdentityModel"[^>]*-->', '<PackageReference Include="IdentityModel" Version="7.0.0" />')
+        } elseif ($content -notmatch 'PackageReference\s+Include="IdentityModel"') {
+            $content = [System.Text.RegularExpressions.Regex]::Replace($content, '</ItemGroup>', "    <PackageReference Include=`"IdentityModel`" Version=`"7.0.0`" />`r`n  </ItemGroup>", [System.Text.RegularExpressions.RegexOptions]::None)
+        }
+    }
+
+    # 补齐 Microsoft.OpenApi
+    if ($needsOpenApi) {
+        if ($content -notmatch 'PackageReference\s+Include="Microsoft\.OpenApi"') {
+            $content = [System.Text.RegularExpressions.Regex]::Replace($content, '</ItemGroup>', "    <PackageReference Include=`"Microsoft.OpenApi`" Version=`"1.6.23`" />`r`n  </ItemGroup>", [System.Text.RegularExpressions.RegexOptions]::None)
+        }
+    }
 
     if ($content -ne $origContent) {
         [System.IO.File]::WriteAllText($file, $content, [System.Text.Encoding]::UTF8)
@@ -321,21 +365,24 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "依赖还原成功。" -ForegroundColor Green
 
 # -------------------------------------------------------------------------
-# [步骤 5] 编译验证
+# [步骤 5] 编译严格校验（关键拦截点：编译失败绝不进入迁移！）
 # -------------------------------------------------------------------------
-Write-Host "`n[步骤 5/6] 编译项目 (dotnet build)..." -ForegroundColor Cyan
-$confirmBuild = Read-Host "是否立即执行项目编译构建验证？[Y/n]"
-if ($confirmBuild -ne "n" -and $confirmBuild -ne "N") {
-    dotnet build --configuration Release --no-incremental
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "项目编译通过！" -ForegroundColor Green
-    } else {
-        Write-Warning "项目编译存在错误，请排查上方输出详情。"
-    }
+Write-Host "`n[步骤 5/6] 编译项目进行严格验证 (dotnet build)..." -ForegroundColor Cyan
+
+dotnet build --configuration Release --no-incremental
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "`n==========================================================" -ForegroundColor Red
+    Write-Host " [错误拦截] 项目编译存在错误！已中止后续数据库迁移操作。" -ForegroundColor Red
+    Write-Host " 请根据上方具体的编译错误排查并修复代码后，再执行迁移。" -ForegroundColor Red
+    Write-Host "==========================================================" -ForegroundColor Red
+    exit 1
 }
 
+Write-Host "恭喜！整个解决方案所有项目在 .NET 10 下编译全部成功！" -ForegroundColor Green
+
 # -------------------------------------------------------------------------
-# [步骤 6] 针对所有探测到的项目执行 EF Core 数据库迁移 (默认名称: Abp10.6.1)
+# [步骤 6] 编译成功后，执行 EF Core 数据库迁移 (默认名称: Abp10.6.1)
 # -------------------------------------------------------------------------
 Write-Host "`n[步骤 6/6] 数据库迁移与更新 (迁移名称: $MigrationName)..." -ForegroundColor Cyan
 
@@ -345,7 +392,7 @@ if ($candidateMigrationProjects.Count -gt 0) {
         Write-Host "  [$($i + 1)] $($candidateMigrationProjects[$i].Name)" -ForegroundColor White
     }
 
-    $migrationChoice = Read-Host "`n是否立即对以上 $($candidateMigrationProjects.Count) 个项目执行迁移与更新？[Y:全部执行 / S:逐个确认 / N:跳过]"
+    $migrationChoice = Read-Host "`n.NET 编译已通过，是否立即对以上 $($candidateMigrationProjects.Count) 个项目执行迁移与更新？[Y:全部执行 / S:逐个确认 / N:跳过]"
     if ($migrationChoice -ne "n" -and $migrationChoice -ne "N") {
         foreach ($targetProject in $candidateMigrationProjects) {
             Write-Host "`n----------------------------------------------------------" -ForegroundColor DarkCyan
@@ -365,13 +412,28 @@ if ($candidateMigrationProjects.Count -gt 0) {
             if ($targetProject.Name -match 'DbMigrator') {
                 Write-Host "[$($targetProject.Name)] 检测到为 DbMigrator 项目，正在启动迁移程序..." -ForegroundColor Yellow
                 dotnet run
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "[$($targetProject.Name)] DbMigrator 执行成功！" -ForegroundColor Green
+                } else {
+                    Write-Error "[$($targetProject.Name)] DbMigrator 执行失败，退出码: $LASTEXITCODE"
+                }
             } else {
                 Write-Host "[$($targetProject.Name)] 执行: dotnet ef migrations add $MigrationName" -ForegroundColor Yellow
                 dotnet ef migrations add $MigrationName
 
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "[$($targetProject.Name)] 添加迁移失败，已中止对该项目的数据库更新！" -ForegroundColor Red
+                    continue
+                }
+
                 Write-Host "[$($targetProject.Name)] 执行: dotnet ef database update" -ForegroundColor Yellow
                 dotnet ef database update
-                Write-Host "[$($targetProject.Name)] 迁移与更新已完成！" -ForegroundColor Green
+
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "[$($targetProject.Name)] 数据库迁移与更新成功！" -ForegroundColor Green
+                } else {
+                    Write-Host "[$($targetProject.Name)] 数据库更新失败，请排查连接字符串或 SQL 报错。" -ForegroundColor Red
+                }
             }
         }
         Set-Location $ProjectsPath
@@ -387,5 +449,5 @@ if ($candidateMigrationProjects.Count -gt 0) {
 # -------------------------------------------------------------------------
 Set-Location $ProjectsPath
 Write-Host "`n==========================================================" -ForegroundColor Green
-Write-Host " 升级流程全部完成！已成功升级至 ABP $AbpVersion + .NET 10" -ForegroundColor Green
+Write-Host " 升级与迁移流程全部完成！已成功升级至 ABP $AbpVersion + .NET 10" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
