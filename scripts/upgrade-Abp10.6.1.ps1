@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     ABP 多项目通用升级脚本（支持模块项目、应用项目、微服务项目）
     目标：升级至 ABP 10.6.1 + .NET 10 (net10.0)
@@ -31,7 +31,7 @@ param (
     [string]$ProjectsPath = "",
     [string]$AbpVersion = "10.6.1",
     [string]$TargetFramework = "net10.0",
-    [string]$DotNetVersion = "10.0.9",
+    [string]$DotNetVersion = "10.0.12",
     [string]$MigrationName = "",
     [switch]$SkipGitCheck = $false,
     [switch]$AutoConfirm = $false
@@ -57,6 +57,8 @@ if ([string]::IsNullOrWhiteSpace($ProjectsPath)) {
     $ProjectsPath = (Resolve-Path $ProjectsPath).Path
 }
 
+Set-Location $ProjectsPath
+
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "          ABP 解决方案通用升级工具 (.NET 10)" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
@@ -67,7 +69,7 @@ Write-Host "迁移名称  : $MigrationName" -ForegroundColor Gray
 # -------------------------------------------------------------------------
 # 2. 检查 Git 状态
 # -------------------------------------------------------------------------
-if (-not $SkipGitCheck) {
+if (-not $SkipGitCheck -and -not $AutoConfirm) {
     Write-Host "`n[准备工作] 检查 Git 状态..." -ForegroundColor Cyan
     Set-Location $ProjectsPath
     $gitInstalled = Get-Command "git" -ErrorAction SilentlyContinue
@@ -116,7 +118,7 @@ if ($AutoConfirm) {
 
 # 收集待更新的 csproj 与 props 文件
 $csprojFiles = Get-ChildItem -Path $ProjectsPath -Recurse -Filter *.csproj -File
-$propsFiles = Get-ChildItem -Path $ProjectsPath -Recurse -Include "common.props", "Directory.Build.props" -File
+$propsFiles = Get-ChildItem -Path $ProjectsPath -Recurse -Filter "*props" -File | Where-Object { $_.Name -in @("common.props", "Directory.Build.props") }
 
 # 统计分析每个项目的当前框架
 $planProjectList = @()
@@ -265,9 +267,11 @@ foreach ($propFile in $propsFiles) {
         if ($content -notmatch 'GHSA-rvv3-g6hj-g44x') {
             $suppressXml = @"
   <ItemGroup>
-    <!-- 压制已知第三方包的 NuGet 安全审计警告 (AutoMapper 14 与 SQLitePCLRaw) -->
+    <!-- 压制已知第三方包的 NuGet 安全审计警告 (AutoMapper 14 与 SQLitePCLRaw 与 SixLabors) -->
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2cmq-823j-5qj8" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rxmq-m78w-7wmc" />
   </ItemGroup>
 "@
             $content = $content -replace '</Project>', "$suppressXml`n</Project>"
@@ -413,7 +417,16 @@ if ($abpCmd) {
 # -------------------------------------------------------------------------
 Write-Host "`n[步骤 4/6] 还原项目依赖 (dotnet restore)..." -ForegroundColor Cyan
 Set-Location $ProjectsPath
-dotnet restore
+
+$slnTarget = $null
+$slnFiles = Get-ChildItem -Path $ProjectsPath -Filter *.sln -File
+if ($slnFiles.Count -gt 0) {
+    $slnTarget = $slnFiles[0].FullName
+    Write-Host "检测到解决方案文件: $($slnFiles[0].Name)，将针对解决方案执行还原与构建..." -ForegroundColor Gray
+    dotnet restore "`"$slnTarget`""
+} else {
+    dotnet restore
+}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "dotnet restore 失败，请检查 NuGet 配置。"
@@ -426,7 +439,11 @@ Write-Host "依赖还原成功。" -ForegroundColor Green
 # -------------------------------------------------------------------------
 Write-Host "`n[步骤 5/6] 编译项目进行严格验证 (dotnet build)..." -ForegroundColor Cyan
 
-dotnet build --configuration Release --no-incremental
+if ($slnTarget) {
+    dotnet build "`"$slnTarget`"" --configuration Release --no-incremental
+} else {
+    dotnet build --configuration Release --no-incremental
+}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`n==========================================================" -ForegroundColor Red
